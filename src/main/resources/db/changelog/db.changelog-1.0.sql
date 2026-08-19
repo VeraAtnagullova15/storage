@@ -1,3 +1,5 @@
+--liquibase formatted sql
+
 -- changeset vatnagullova:1
 CREATE TABLE IF NOT EXISTS users
 (
@@ -5,4 +7,10 @@ CREATE TABLE IF NOT EXISTS users
     login VARCHAR(255) NOT NULL UNIQUE,
     password VARCHAR(255) NOT NULL
 );
+
+-- changeset vatnagullova:2
+ALTER TABLE users
+RENAME COLUMN login TO username;
+
+
 
