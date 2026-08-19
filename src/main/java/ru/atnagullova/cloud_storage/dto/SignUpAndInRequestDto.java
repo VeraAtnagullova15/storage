@@ -3,7 +3,7 @@ package ru.atnagullova.cloud_storage.dto;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
-public record SignUpRequestDto(
+public record SignUpAndInRequestDto(
 
         @NotBlank
         @Size(min = 3, max = 65)

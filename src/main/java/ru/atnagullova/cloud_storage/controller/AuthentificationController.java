@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import ru.atnagullova.cloud_storage.dto.SignUpRequestDto;
+import ru.atnagullova.cloud_storage.dto.SignUpAndInRequestDto;
 import ru.atnagullova.cloud_storage.dto.UserResponseDto;
 import ru.atnagullova.cloud_storage.service.AuthentificationService;
 
@@ -25,10 +25,17 @@ public class AuthentificationController {
 
 
     @PostMapping("/sign-up")
-    public ResponseEntity<UserResponseDto> signUp(@Valid @RequestBody SignUpRequestDto requestDto) {
+    public ResponseEntity<UserResponseDto> signUp(@Valid @RequestBody SignUpAndInRequestDto requestDto) {
 
         return new ResponseEntity<>(authentificationService.signUp(requestDto),HttpStatus.CREATED) ;
     }
+
+    @PostMapping("/sign-in")
+    public ResponseEntity<UserResponseDto> signIn(@Valid @RequestBody SignUpAndInRequestDto requestDto) {
+
+        return new ResponseEntity<>(authentificationService.signIn(requestDto),HttpStatus.OK) ;
+    }
+
 
 
 }
