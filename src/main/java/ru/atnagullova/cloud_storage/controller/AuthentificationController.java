@@ -1,13 +1,12 @@
 package ru.atnagullova.cloud_storage.controller;
 
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import ru.atnagullova.cloud_storage.dto.SignUpAndInRequestDto;
 import ru.atnagullova.cloud_storage.dto.UserResponseDto;
 import ru.atnagullova.cloud_storage.service.AuthentificationService;
@@ -25,17 +24,20 @@ public class AuthentificationController {
 
 
     @PostMapping("/sign-up")
-    public ResponseEntity<UserResponseDto> signUp(@Valid @RequestBody SignUpAndInRequestDto requestDto) {
+    public ResponseEntity<UserResponseDto> signUp(HttpServletRequest request,
+                                                  HttpServletResponse response,
+                                                  @Valid @RequestBody SignUpAndInRequestDto requestDto) {
 
-        return new ResponseEntity<>(authentificationService.signUp(requestDto),HttpStatus.CREATED) ;
+        return new ResponseEntity<>(authentificationService.signUp(requestDto, request, response),HttpStatus.CREATED) ;
     }
 
     @PostMapping("/sign-in")
-    public ResponseEntity<UserResponseDto> signIn(@Valid @RequestBody SignUpAndInRequestDto requestDto) {
+    public ResponseEntity<UserResponseDto> signIn(HttpServletRequest request,
+                                                  HttpServletResponse response,
+                                                  @Valid @RequestBody SignUpAndInRequestDto requestDto) {
 
-        return new ResponseEntity<>(authentificationService.signIn(requestDto),HttpStatus.OK) ;
+        return new ResponseEntity<>(authentificationService.signIn(requestDto, request, response),HttpStatus.OK) ;
     }
-
 
 
 }
