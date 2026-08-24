@@ -11,7 +11,7 @@ import ru.atnagullova.cloud_storage.dto.UserResponseDto;
 import ru.atnagullova.cloud_storage.service.CurrentUserService;
 
 @RestController
-@RequestMapping("/user")
+@RequestMapping("/api/user")
 public class CurrentUserController {
 
     private final CurrentUserService userService;
