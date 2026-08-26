@@ -16,6 +16,7 @@ import ru.atnagullova.cloud_storage.configuration.UserDetailsImpl;
 import ru.atnagullova.cloud_storage.dto.SignUpAndInRequestDto;
 import ru.atnagullova.cloud_storage.dto.UserResponseDto;
 import ru.atnagullova.cloud_storage.entity.User;
+import ru.atnagullova.cloud_storage.exception.UserAlreadyExistsException;
 import ru.atnagullova.cloud_storage.repository.UserRepository;
 
 
@@ -42,6 +43,11 @@ public class AuthentificationService {
     public UserResponseDto signUp(SignUpAndInRequestDto requestDto,
                                   HttpServletRequest request,
                                   HttpServletResponse response) {
+
+        if (userRepository.findByUsername(requestDto.username()).isPresent()) {
+            throw new UserAlreadyExistsException("User with username " + requestDto.username() +
+                    " already exists");
+        }
 
         String encodedPassword = passwordEncoder.encode(requestDto.password());
         User user = new User(requestDto.username(), encodedPassword);
