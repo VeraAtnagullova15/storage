@@ -9,17 +9,17 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import ru.atnagullova.cloud_storage.dto.SignUpAndInRequestDto;
 import ru.atnagullova.cloud_storage.dto.UserResponseDto;
-import ru.atnagullova.cloud_storage.service.AuthentificationService;
+import ru.atnagullova.cloud_storage.service.AuthenticationService;
 
 @RestController
 @RequestMapping("/api/auth")
-public class AuthentificationController {
+public class AuthenticationController {
 
-    private final AuthentificationService authentificationService;
+    private final AuthenticationService authenticationService;
 
     @Autowired
-    public AuthentificationController(AuthentificationService authentificationService) {
-        this.authentificationService = authentificationService;
+    public AuthenticationController(AuthenticationService authenticationService) {
+        this.authenticationService = authenticationService;
     }
 
 
@@ -28,7 +28,7 @@ public class AuthentificationController {
                                                   HttpServletResponse response,
                                                   @Valid @RequestBody SignUpAndInRequestDto requestDto) {
 
-        return new ResponseEntity<>(authentificationService.signUp(requestDto, request, response),HttpStatus.CREATED) ;
+        return new ResponseEntity<>(authenticationService.signUp(requestDto, request, response),HttpStatus.CREATED) ;
     }
 
     @PostMapping("/sign-in")
@@ -36,7 +36,7 @@ public class AuthentificationController {
                                                   HttpServletResponse response,
                                                   @Valid @RequestBody SignUpAndInRequestDto requestDto) {
 
-        return new ResponseEntity<>(authentificationService.signIn(requestDto, request, response),HttpStatus.OK) ;
+        return new ResponseEntity<>(authenticationService.signIn(requestDto, request, response),HttpStatus.OK) ;
     }
 
 

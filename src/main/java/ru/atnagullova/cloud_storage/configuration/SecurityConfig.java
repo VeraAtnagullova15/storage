@@ -1,5 +1,6 @@
 package ru.atnagullova.cloud_storage.configuration;
 
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -39,6 +40,9 @@ public class SecurityConfig {
                         .logoutSuccessHandler((
                                 request, response, authentication) ->
                                 response.setStatus(204)))
+                .exceptionHandling(e -> e
+                        .authenticationEntryPoint((request, response, authException) ->
+                                response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Unauthorized")))
                 .build();
     }
 

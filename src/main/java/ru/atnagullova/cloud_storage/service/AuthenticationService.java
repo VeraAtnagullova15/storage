@@ -22,7 +22,7 @@ import ru.atnagullova.cloud_storage.repository.UserRepository;
 
 @Service
 @Transactional
-public class AuthentificationService {
+public class AuthenticationService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
@@ -30,10 +30,10 @@ public class AuthentificationService {
     private final SecurityContextRepository securityContextRepository;
 
     @Autowired
-    public AuthentificationService(UserRepository userRepository,
-                                   PasswordEncoder passwordEncoder,
-                                   AuthenticationManager authenticationManager,
-                                   SecurityContextRepository securityContextRepository) {
+    public AuthenticationService(UserRepository userRepository,
+                                 PasswordEncoder passwordEncoder,
+                                 AuthenticationManager authenticationManager,
+                                 SecurityContextRepository securityContextRepository) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.authenticationManager = authenticationManager;
