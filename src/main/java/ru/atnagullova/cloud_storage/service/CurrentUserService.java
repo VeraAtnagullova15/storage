@@ -4,7 +4,7 @@ import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import ru.atnagullova.cloud_storage.configuration.UserDetailsImpl;
+import ru.atnagullova.cloud_storage.configuration.security.UserDetailsImpl;
 import ru.atnagullova.cloud_storage.dto.UserResponseDto;
 import ru.atnagullova.cloud_storage.exception.UserNotAuthenticatedException;
 

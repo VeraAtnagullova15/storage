@@ -1,4 +1,4 @@
-package ru.atnagullova.cloud_storage.configuration;
+package ru.atnagullova.cloud_storage.configuration.security;
 
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.context.annotation.Bean;

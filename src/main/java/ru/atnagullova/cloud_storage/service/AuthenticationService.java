@@ -12,7 +12,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.context.SecurityContextRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import ru.atnagullova.cloud_storage.configuration.UserDetailsImpl;
+import ru.atnagullova.cloud_storage.configuration.security.UserDetailsImpl;
 import ru.atnagullova.cloud_storage.dto.SignUpAndInRequestDto;
 import ru.atnagullova.cloud_storage.dto.UserResponseDto;
 import ru.atnagullova.cloud_storage.entity.User;

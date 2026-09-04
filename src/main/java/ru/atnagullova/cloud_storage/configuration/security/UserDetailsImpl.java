@@ -1,4 +1,4 @@
-package ru.atnagullova.cloud_storage.configuration;
+package ru.atnagullova.cloud_storage.configuration.security;
 
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;

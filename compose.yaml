@@ -13,6 +13,18 @@ services:
     image: redis:latest
     ports:
      - '6379:6379'
+  minio:
+    image: minio/minio:latest
+    container_name: minio
+    command: server /data --address ":9010" --console-address ":9011"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin123
+    ports:
+      - '9010:9010'
+      - '9011:9011'
+    volumes:
+      - minio-data:/data
   backend:
     build:
       context: .
@@ -25,9 +37,14 @@ services:
       SPRING_DATASOURCE_PASSWORD: bestUser
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: 6379
+      MINIO_URL: http://minio:9010
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin123
+      MINIO_BUCKET: user-files
     depends_on:
       - postgres
       - redis
+      - minio
 
   frontend:
     build:
@@ -38,4 +55,5 @@ services:
       - backend
 volumes:
   postgres_data:
+  minio-data:
 
