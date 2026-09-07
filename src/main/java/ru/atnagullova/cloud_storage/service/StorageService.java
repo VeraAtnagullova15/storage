@@ -18,7 +18,7 @@ public interface StorageService {
 
     List<ResourceInfoDto> search(Long userId, String query);
 
-    List<ResourceInfoDto> upload(Long userId, String path, MultipartFile file);
+    List<ResourceInfoDto> upload(Long userId, String path, List<MultipartFile> files);
 
     List<ResourceInfoDto> getDirectoryInfo(Long userId, String path);
 
