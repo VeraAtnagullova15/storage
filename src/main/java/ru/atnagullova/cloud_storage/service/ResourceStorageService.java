@@ -6,7 +6,7 @@ import ru.atnagullova.cloud_storage.dto.ResourceInfoDto;
 
 import java.util.List;
 
-public interface StorageService {
+public interface ResourceStorageService {
 
     ResourceInfoDto getInfo(Long userId, String path);
 
@@ -19,9 +19,5 @@ public interface StorageService {
     List<ResourceInfoDto> search(Long userId, String query);
 
     List<ResourceInfoDto> upload(Long userId, String path, List<MultipartFile> files);
-
-    List<ResourceInfoDto> getDirectoryInfo(Long userId, String path);
-
-    ResourceInfoDto createEmptyDirectory(Long userId, String path);
 
 }

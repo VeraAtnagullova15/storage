@@ -16,8 +16,7 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
-@Transactional
-public class StorageServiceImpl implements StorageService {
+public class ResourceStorageServiceImpl implements ResourceStorageService {
 
     private final MinioClient minioClient;
     private final MinioProperties minioProperties;
@@ -29,7 +28,6 @@ public class StorageServiceImpl implements StorageService {
 
     @Override
     public void delete(Long userId, String path) {
-
     }
 
     @Override
@@ -72,16 +70,6 @@ public class StorageServiceImpl implements StorageService {
         }
 
         return uploadedFiles;
-    }
-
-    @Override
-    public List<ResourceInfoDto> getDirectoryInfo(Long userId, String path) {
-        return List.of();
-    }
-
-    @Override
-    public ResourceInfoDto createEmptyDirectory(Long userId, String path) {
-        return null;
     }
 
     private String createUserFolderKey(Long userId, String path) {
