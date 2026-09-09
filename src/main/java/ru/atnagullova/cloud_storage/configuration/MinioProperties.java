@@ -1,4 +1,4 @@
-package ru.atnagullova.cloud_storage.configuration.minio;
+package ru.atnagullova.cloud_storage.configuration;
 
 import lombok.Getter;
 import lombok.Setter;

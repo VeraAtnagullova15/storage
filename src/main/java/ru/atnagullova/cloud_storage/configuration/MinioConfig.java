@@ -1,4 +1,4 @@
-package ru.atnagullova.cloud_storage.configuration.minio;
+package ru.atnagullova.cloud_storage.configuration;
 
 
 import io.minio.BucketExistsArgs;
@@ -7,9 +7,11 @@ import io.minio.MinioClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile;
 import ru.atnagullova.cloud_storage.exception.InitializeBucketException;
 
 @Configuration
+@Profile("!test")
 public class MinioConfig {
 
     private final MinioProperties minioProperties;
@@ -47,7 +49,7 @@ public class MinioConfig {
             }
         } catch (Exception e) {
 
-            throw new InitializeBucketException("Bucket " + minioProperties.getBucket() + "wasn't initialize");
+            throw new InitializeBucketException("Bucket " + minioProperties.getBucket() + " wasn't initialize");
         }
     }
 
