@@ -2,14 +2,18 @@ package ru.atnagullova.cloud_storage.service;
 
 import io.minio.MinioClient;
 import io.minio.PutObjectArgs;
+import io.minio.StatObjectArgs;
+import io.minio.errors.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import ru.atnagullova.cloud_storage.configuration.minio.MinioProperties;
 import ru.atnagullova.cloud_storage.dto.DownloadFileInfoDto;
 import ru.atnagullova.cloud_storage.dto.ResourceInfoDto;
 import ru.atnagullova.cloud_storage.dto.ResourceType;
+import ru.atnagullova.cloud_storage.exception.ResourceAlreadyExistsException;
+import ru.atnagullova.cloud_storage.exception.StorageMinioException;
+import ru.atnagullova.cloud_storage.util.PathBuilderUtil;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -48,9 +52,30 @@ public class ResourceStorageServiceImpl implements ResourceStorageService {
     @Override
     public List<ResourceInfoDto> upload(Long userId, String path, List<MultipartFile> files) {
 
-        List<ResourceInfoDto> uploadedFiles = new ArrayList<>();
-        String userFolderKey = createUserFolderKey(userId, path);
+        String userFolderKey = PathBuilderUtil.buildObjectKey(userId, path);
 
+        try {
+            for (MultipartFile file : files) {
+                String fileName = file.getOriginalFilename();
+                String objectKey = userFolderKey + fileName;
+
+                minioClient.statObject(StatObjectArgs.builder()
+                        .bucket(minioProperties.getBucket())
+                        .object(objectKey)
+                        .build());
+                throw new ResourceAlreadyExistsException("Resource already exists " + file.getOriginalFilename());
+            }
+        } catch (ResourceAlreadyExistsException resourceAlreadyExistsException) {
+            resourceAlreadyExistsException.getMessage();
+        } catch (ErrorResponseException errorResponseException) {
+            if (!"NoSuchKey".equals(errorResponseException.errorResponse().code())) {
+                throw new StorageMinioException("MinIO error");
+            }
+        } catch (Exception e) {
+            throw new StorageMinioException("Error with checking file");
+        }
+
+        List<ResourceInfoDto> uploadedFiles = new ArrayList<>();
         try {
             for (MultipartFile file : files) {
                 String fileName = file.getOriginalFilename();
@@ -63,18 +88,16 @@ public class ResourceStorageServiceImpl implements ResourceStorageService {
                         .stream(file.getInputStream(), file.getSize(), -1)
                         .build());
 
-                uploadedFiles.add(new ResourceInfoDto(userFolderKey, fileName, file.getSize(), ResourceType.FILE));
+                uploadedFiles.add(new ResourceInfoDto(PathBuilderUtil.getParentFolderPath(userId, objectKey),
+                        PathBuilderUtil.getObjectName(objectKey), file.getSize(), ResourceType.FILE));
             }
         } catch (Exception e) {
-            //TODO
+            throw new StorageMinioException("Upload was failed");
         }
 
         return uploadedFiles;
     }
-
-    private String createUserFolderKey(Long userId, String path) {
-        return "user-" + userId + "-files/" + path;
-    }
+    
 }
 
 
