@@ -17,7 +17,7 @@ public interface ResourceStorageController {
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     ResponseEntity<List<ResourceInfoDto>> upload(@RequestParam String path,
-                                                 @RequestParam List<MultipartFile> files,
+                                                 @RequestParam List<MultipartFile> object,
                                                  @AuthenticationPrincipal UserDetailsImpl userDetails);
 
 }

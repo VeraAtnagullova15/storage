@@ -5,6 +5,7 @@ import io.minio.PutObjectArgs;
 import io.minio.StatObjectArgs;
 import io.minio.errors.*;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import ru.atnagullova.cloud_storage.configuration.minio.MinioProperties;
@@ -20,6 +21,7 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class ResourceStorageServiceImpl implements ResourceStorageService {
 
     private final MinioClient minioClient;
@@ -92,6 +94,7 @@ public class ResourceStorageServiceImpl implements ResourceStorageService {
                         PathBuilderUtil.getObjectName(objectKey), file.getSize(), ResourceType.FILE));
             }
         } catch (Exception e) {
+            log.error("Upload failed for userId={}, path={}", userId, path, e);
             throw new StorageMinioException("Upload was failed");
         }
 
