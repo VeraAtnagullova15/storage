@@ -46,7 +46,7 @@ public class PathBuilderUtil {
 
         int slash = path.lastIndexOf('/');
         if (slash != -1) {
-            return path.substring(slash + 1);
+            return path.substring(0,slash + 1);
         }
 
         return "";

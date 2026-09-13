@@ -8,7 +8,7 @@ import lombok.Setter;
 @NoArgsConstructor
 @Getter
 @Setter
-public class InvalidUserData {
+public class ErrorResponseData {
 
     private String message;
 

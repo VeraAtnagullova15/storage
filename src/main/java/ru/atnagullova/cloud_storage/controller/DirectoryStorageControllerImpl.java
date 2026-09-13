@@ -5,6 +5,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RestController;
 import ru.atnagullova.cloud_storage.configuration.security.UserDetailsImpl;
+import ru.atnagullova.cloud_storage.dto.DirectoryInfoDto;
 import ru.atnagullova.cloud_storage.dto.ResourceInfoDto;
 import ru.atnagullova.cloud_storage.service.DirectoryStorageService;
 
@@ -24,4 +25,15 @@ public class DirectoryStorageControllerImpl implements DirectoryStorageControlle
 
         return new ResponseEntity<>(directoryResults, HttpStatus.OK);
     }
+
+    @Override
+    public ResponseEntity<DirectoryInfoDto> createEmptyDirectory(String path, UserDetailsImpl userDetails) {
+
+        Long userId = userDetails.getId();
+        DirectoryInfoDto directoryInfo = directoryStorageService.createEmptyDirectory(userId, path);
+
+        return new ResponseEntity<>(directoryInfo, HttpStatus.CREATED);
+    }
+
+
 }

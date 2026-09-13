@@ -28,6 +28,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
     private final SecurityContextRepository securityContextRepository;
+    private final DirectoryStorageService directoryStorageService;
 
 
     @Override
@@ -44,6 +45,8 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         String encodedPassword = passwordEncoder.encode(requestDto.password());
         User user = new User(requestDto.username(), encodedPassword);
         userRepository.save(user);
+
+        directoryStorageService.createEmptyDirectory(user.getId(), "");
 
         UserDetailsImpl userDetails = new UserDetailsImpl(user);
         Authentication authentication = new UsernamePasswordAuthenticationToken(

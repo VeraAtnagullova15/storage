@@ -2,6 +2,7 @@ package ru.atnagullova.cloud_storage.service;
 
 import io.minio.ListObjectsArgs;
 import io.minio.MinioClient;
+import io.minio.PutObjectArgs;
 import io.minio.Result;
 import io.minio.messages.Item;
 import lombok.RequiredArgsConstructor;
@@ -11,9 +12,11 @@ import ru.atnagullova.cloud_storage.dto.DirectoryInfoDto;
 import ru.atnagullova.cloud_storage.dto.ResourceInfoDto;
 import ru.atnagullova.cloud_storage.dto.ResourceType;
 import ru.atnagullova.cloud_storage.exception.NoSuchDirectoryException;
+import ru.atnagullova.cloud_storage.exception.ResourceAlreadyExistsException;
 import ru.atnagullova.cloud_storage.exception.StorageMinioException;
 import ru.atnagullova.cloud_storage.util.PathBuilderUtil;
 
+import java.io.ByteArrayInputStream;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -58,15 +61,49 @@ public class DirectoryStorageServiceImpl implements DirectoryStorageService {
                         isDir ? ResourceType.DIRECTORY : ResourceType.FILE));
             }
 
-            return directoryResults;
-
+        } catch (NoSuchDirectoryException directoryException) {
+            directoryException.getMessage();
         } catch (Exception e) {
             throw new StorageMinioException("Getting directory resources failed");
         }
+
+        return directoryResults;
     }
 
     @Override
     public DirectoryInfoDto createEmptyDirectory(Long userId, String path) {
-        return null;
+
+        String userFolderKey = PathBuilderUtil.buildObjectKey(userId, path);
+
+        // TODO isDirectoryPathCheck();
+
+        try {
+            boolean directoryExists = minioClient.listObjects(ListObjectsArgs.builder()
+                            .bucket(minioProperties.getBucket())
+                            .prefix(userFolderKey)
+                            .maxKeys(1)
+                            .build())
+                    .iterator().hasNext();
+
+            if (directoryExists) {
+                throw new ResourceAlreadyExistsException("Directory already exists " + path);
+            }
+
+            //TODO isParentFolderExists();
+
+            minioClient.putObject(PutObjectArgs.builder()
+                    .bucket(minioProperties.getBucket())
+                    .object(userFolderKey)
+                    .stream(new ByteArrayInputStream(new byte[0]), 0, -1)
+                    .build());
+
+        } catch (ResourceAlreadyExistsException alreadyExistsException) {
+            throw alreadyExistsException;
+        } catch (Exception e) {
+            throw new StorageMinioException("Creation directory was failed " + path);
+        }
+
+        return new DirectoryInfoDto(PathBuilderUtil.getParentFolderPath(userId, userFolderKey),
+                PathBuilderUtil.getObjectName(userFolderKey), ResourceType.DIRECTORY);
     }
 }
