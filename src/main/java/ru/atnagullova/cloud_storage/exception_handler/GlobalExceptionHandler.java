@@ -8,6 +8,7 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import ru.atnagullova.cloud_storage.exception.*;
 
 @ControllerAdvice
@@ -87,6 +88,15 @@ public class GlobalExceptionHandler {
 
         return new ResponseEntity<>(data, HttpStatus.INTERNAL_SERVER_ERROR);
     }
+
+//    @ExceptionHandler
+//    public ResponseEntity<ErrorResponseData> handleException(MaxUploadSizeExceededException maxUploadSizeExceededException) {
+//
+//        ErrorResponseData data = new ErrorResponseData();
+//        data.setMessage(storageMinioException.getMessage());
+//
+//        return new ResponseEntity<>(data, HttpStatus.INTERNAL_SERVER_ERROR);
+//    }
 
     @ExceptionHandler
     public ResponseEntity<ErrorResponseData> handleException(Exception exception) {

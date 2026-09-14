@@ -62,7 +62,7 @@ public class DirectoryStorageServiceImpl implements DirectoryStorageService {
             }
 
         } catch (NoSuchDirectoryException directoryException) {
-            directoryException.getMessage();
+            throw directoryException;
         } catch (Exception e) {
             throw new StorageMinioException("Getting directory resources failed");
         }

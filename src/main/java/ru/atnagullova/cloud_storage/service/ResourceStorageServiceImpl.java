@@ -52,34 +52,38 @@ public class ResourceStorageServiceImpl implements ResourceStorageService {
     }
 
     @Override
-    public List<ResourceInfoDto> upload(Long userId, String path, List<MultipartFile> files) {
+    public List<ResourceInfoDto> upload(Long userId, String path, List<MultipartFile> object) {
 
         String userFolderKey = PathBuilderUtil.buildObjectKey(userId, path);
 
-        try {
-            for (MultipartFile file : files) {
-                String fileName = file.getOriginalFilename();
-                String objectKey = userFolderKey + fileName;
+        boolean resourceExists = false;
+        for (MultipartFile file : object) {
+            String objectKey = userFolderKey + file.getOriginalFilename();
 
+            try {
                 minioClient.statObject(StatObjectArgs.builder()
                         .bucket(minioProperties.getBucket())
                         .object(objectKey)
                         .build());
+                resourceExists = true;
+            } catch (ErrorResponseException errorResponseException) {
+                if ("NoSuchKey".equals(errorResponseException.errorResponse().code())) {
+                    resourceExists = false;
+                }
+                log.error("Error with checking file {}", objectKey, errorResponseException);
+                throw new StorageMinioException("MinIO error while checking existing file " + objectKey);
+            } catch (Exception e) {
+                log.error("Unexpected error with cheking existing file {}", objectKey, e);
+                throw new StorageMinioException("Error with checking file");
+            }
+            if (resourceExists) {
                 throw new ResourceAlreadyExistsException("Resource already exists " + file.getOriginalFilename());
             }
-        } catch (ResourceAlreadyExistsException resourceAlreadyExistsException) {
-            resourceAlreadyExistsException.getMessage();
-        } catch (ErrorResponseException errorResponseException) {
-            if (!"NoSuchKey".equals(errorResponseException.errorResponse().code())) {
-                throw new StorageMinioException("MinIO error");
-            }
-        } catch (Exception e) {
-            throw new StorageMinioException("Error with checking file");
         }
 
         List<ResourceInfoDto> uploadedFiles = new ArrayList<>();
         try {
-            for (MultipartFile file : files) {
+            for (MultipartFile file : object) {
                 String fileName = file.getOriginalFilename();
                 String objectKey = userFolderKey + fileName;
 
