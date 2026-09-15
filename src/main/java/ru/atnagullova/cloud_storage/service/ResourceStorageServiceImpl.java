@@ -2,6 +2,9 @@ package ru.atnagullova.cloud_storage.service;
 
 import io.minio.*;
 import io.minio.errors.*;
+import io.minio.messages.DeleteError;
+import io.minio.messages.DeleteObject;
+import io.minio.messages.Item;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -71,6 +74,57 @@ public class ResourceStorageServiceImpl implements ResourceStorageService {
 
     @Override
     public void delete(Long userId, String path) {
+        String userObjectKey = PathBuilderUtil.buildObjectKey(userId, path);
+
+        try {
+
+            if (PathValidationUtils.isPathDirectoryCheck(userId, path)) {
+                List<DeleteObject> toDelete = new ArrayList<>();
+
+                Iterable<Result<Item>> items = minioClient.listObjects(ListObjectsArgs.builder()
+                        .bucket(minioProperties.getBucket())
+                        .prefix(userObjectKey)
+                        .recursive(true)
+                        .build());
+
+                for (Result<Item> result : items) {
+                    toDelete.add(new DeleteObject(result.get().objectName()));
+                }
+
+                if (toDelete.isEmpty()) {
+                    throw new ResourceNotFoundException("Directory not found " + path);
+                }
+
+                Iterable<Result<DeleteError>> errors = minioClient.removeObjects(RemoveObjectsArgs.builder()
+                        .bucket(minioProperties.getBucket())
+                        .objects(toDelete)
+                        .build());
+
+                for (Result<DeleteError> resultError : errors) {
+                    resultError.get();
+                }
+            } else {
+
+                minioClient.statObject(StatObjectArgs.builder()
+                                .bucket(minioProperties.getBucket())
+                                .object(userObjectKey)
+                        .build());
+
+                minioClient.removeObject(RemoveObjectArgs.builder()
+                                .bucket(minioProperties.getBucket())
+                                .object(userObjectKey)
+                        .build());
+            }
+        } catch (ErrorResponseException errorResponseException) {
+            if ("NoSuchKey".equals(errorResponseException.errorResponse().code())) {
+                throw new ResourceNotFoundException("Resource not found " + path);
+            }
+            log.error("Minio error while delete resource {}", userObjectKey, errorResponseException);
+            throw new StorageMinioException("Delete resource error " + path);
+        } catch (Exception e) {
+            log.error("");
+            throw new StorageMinioException("Delete resource error " + path);
+        }
     }
 
     @Override

@@ -37,4 +37,13 @@ public class ResourceStorageControllerImpl implements ResourceStorageController 
         return new ResponseEntity<>(uploadedList, HttpStatus.CREATED);
 
     }
+
+    @Override
+    public ResponseEntity<Void> delete(String path, UserDetailsImpl userDetails) {
+
+        Long userId = userDetails.getId();
+        storageService.delete(userId, path);
+
+        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+    }
 }
