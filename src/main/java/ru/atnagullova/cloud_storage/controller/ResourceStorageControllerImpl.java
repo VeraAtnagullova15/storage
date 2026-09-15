@@ -17,6 +17,15 @@ public class ResourceStorageControllerImpl implements ResourceStorageController 
 
     private final ResourceStorageService storageService;
 
+    @Override
+    public ResponseEntity<ResourceInfoDto> getInfo(String path, UserDetailsImpl userDetails) {
+
+        Long userId = userDetails.getId();
+        ResourceInfoDto resourceInfo = storageService.getInfo(userId, path);
+
+        return new ResponseEntity<>(resourceInfo, HttpStatus.OK);
+    }
+
     public ResponseEntity<List<ResourceInfoDto>> upload(String path,
                                                         List<MultipartFile> object,
                                                         UserDetailsImpl userDetails) {

@@ -1,8 +1,6 @@
 package ru.atnagullova.cloud_storage.service;
 
-import io.minio.MinioClient;
-import io.minio.PutObjectArgs;
-import io.minio.StatObjectArgs;
+import io.minio.*;
 import io.minio.errors.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -13,8 +11,10 @@ import ru.atnagullova.cloud_storage.dto.DownloadFileInfoDto;
 import ru.atnagullova.cloud_storage.dto.ResourceInfoDto;
 import ru.atnagullova.cloud_storage.dto.ResourceType;
 import ru.atnagullova.cloud_storage.exception.ResourceAlreadyExistsException;
+import ru.atnagullova.cloud_storage.exception.ResourceNotFoundException;
 import ru.atnagullova.cloud_storage.exception.StorageMinioException;
 import ru.atnagullova.cloud_storage.util.PathBuilderUtil;
+import ru.atnagullova.cloud_storage.util.PathValidationUtils;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -26,10 +26,47 @@ public class ResourceStorageServiceImpl implements ResourceStorageService {
 
     private final MinioClient minioClient;
     private final MinioProperties minioProperties;
+    private final DirectoryStorageService directoryStorageService;
 
     @Override
     public ResourceInfoDto getInfo(Long userId, String path) {
-        return null;
+
+        String userObjectKey = PathBuilderUtil.buildObjectKey(userId, path);
+
+        if (PathValidationUtils.isPathDirectoryCheck(userId, path)) {
+
+            try {
+                if (!directoryStorageService.isDirectoryExists(userObjectKey)) {
+                    throw new ResourceNotFoundException("Directory is not exist");
+                }
+            } catch (ResourceNotFoundException resourceNotFoundException) {
+                throw resourceNotFoundException;
+            } catch (Exception e) {
+                log.error("Unexpected error while getting directory info {}", userObjectKey, e);
+                throw new StorageMinioException("Getting directory info " + path + "was failed");
+            }
+            return new ResourceInfoDto(PathBuilderUtil.getParentFolderPath(userId, userObjectKey),
+                    PathBuilderUtil.getObjectName(userObjectKey), null, ResourceType.DIRECTORY);
+        }
+
+        try {
+            StatObjectResponse statObjectResponse = minioClient.statObject(StatObjectArgs.builder()
+                    .bucket(minioProperties.getBucket())
+                    .object(userObjectKey)
+                    .build());
+
+            return new ResourceInfoDto(PathBuilderUtil.getParentFolderPath(userId, userObjectKey),
+                    PathBuilderUtil.getObjectName(userObjectKey), statObjectResponse.size(), ResourceType.FILE);
+        } catch (ErrorResponseException errorResponseException) {
+            if ("NoSuchKey".equals(errorResponseException.errorResponse().code())) {
+                throw new ResourceNotFoundException("Resource not found " + path);
+            }
+            log.error("Minio error while getting file info {}", userObjectKey, errorResponseException);
+            throw new StorageMinioException("Error while gettimg file info " + path);
+        } catch (Exception e) {
+            log.error("Unexpected error  while getting file info {}", userObjectKey, e);
+            throw new StorageMinioException("Getting file info " + path + "was failed");
+        }
     }
 
     @Override
@@ -69,11 +106,12 @@ public class ResourceStorageServiceImpl implements ResourceStorageService {
             } catch (ErrorResponseException errorResponseException) {
                 if ("NoSuchKey".equals(errorResponseException.errorResponse().code())) {
                     resourceExists = false;
+                } else {
+                    log.error("Error with checking file {}", objectKey, errorResponseException);
+                    throw new StorageMinioException("MinIO error while checking existing file " + objectKey);
                 }
-                log.error("Error with checking file {}", objectKey, errorResponseException);
-                throw new StorageMinioException("MinIO error while checking existing file " + objectKey);
             } catch (Exception e) {
-                log.error("Unexpected error with cheking existing file {}", objectKey, e);
+                log.error("Unexpected error while cheking existing file {}", objectKey, e);
                 throw new StorageMinioException("Error with checking file");
             }
             if (resourceExists) {
@@ -104,7 +142,7 @@ public class ResourceStorageServiceImpl implements ResourceStorageService {
 
         return uploadedFiles;
     }
-    
+
 }
 
 
