@@ -10,4 +10,6 @@ public interface DirectoryStorageService {
     List<ResourceInfoDto> getDirectoryInfo(Long userId, String path);
 
     DirectoryInfoDto createEmptyDirectory(Long userId, String path);
+
+    boolean isDirectoryExists(String folderKey);
 }
