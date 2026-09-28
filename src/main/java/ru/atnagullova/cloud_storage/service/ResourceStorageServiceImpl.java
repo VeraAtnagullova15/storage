@@ -49,7 +49,7 @@ public class ResourceStorageServiceImpl implements ResourceStorageService {
                     PathBuilderUtil.getObjectName(userObjectKey), null, ResourceType.DIRECTORY);
         }
 
-        StatObjectResponse statObjectResponse = minioRepository.isObjectExists(userObjectKey, userId, path);
+        StatObjectResponse statObjectResponse = minioRepository.getObjectInfo(userObjectKey, path);
 
             return new ResourceInfoDto(PathBuilderUtil.getParentFolderPath(userId, userObjectKey),
                     PathBuilderUtil.getObjectName(userObjectKey), statObjectResponse.size(), ResourceType.FILE);
@@ -80,7 +80,7 @@ public class ResourceStorageServiceImpl implements ResourceStorageService {
 
             } else {
 
-                minioRepository.isObjectExists(userObjectKey, userId, path);
+                minioRepository.getObjectInfo(userObjectKey, path);
 
                 minioRepository.removeObject(userObjectKey);
             }
@@ -97,7 +97,24 @@ public class ResourceStorageServiceImpl implements ResourceStorageService {
 
     @Override
     public ResourceInfoDto renameOrMove(Long userId, String from, String to) {
-        return null;
+
+        String fromKey = PathBuilderUtil.buildObjectKey(userId, from);
+        String toKey = PathBuilderUtil.buildObjectKey(userId, to);
+
+        if (!minioRepository.getObjectInfo(fromKey)) {
+            throw new ResourceNotFoundException("Resource not found " + PathBuilderUtil.getObjectName(fromKey));
+        }
+        if (minioRepository.getObjectInfo(toKey)) {
+            throw new ResourceAlreadyExistsException("Resource already exists " + PathBuilderUtil.getObjectName(toKey));
+        }
+
+        minioRepository.copyObject(fromKey, toKey);
+        minioRepository.removeObject(fromKey);
+        StatObjectResponse objectInfo = minioRepository.getObjectInfo(toKey, to);
+        long size = objectInfo.size();
+
+        return new ResourceInfoDto(PathBuilderUtil.getParentFolderPath(userId, toKey),
+                PathBuilderUtil.getObjectName(toKey), size, ResourceType.FILE);
     }
 
     @Override
@@ -114,13 +131,13 @@ public class ResourceStorageServiceImpl implements ResourceStorageService {
             String originalName = file.getOriginalFilename();
             String objectKey = userFolderKey + originalName;
 
-            if (minioRepository.isObjectExists(objectKey)) {
+            if (minioRepository.getObjectInfo(objectKey)) {
                 throw new ResourceAlreadyExistsException("Resource already exists " + file.getOriginalFilename());
             }
 
-            int lastSlash = originalName.indexOf('/');
-            if (lastSlash > 0) {
-                String topFolderKey = PathBuilderUtil.getTopFolder(userFolderKey, originalName, lastSlash);
+            int slashIndex = originalName.indexOf('/');
+            if (slashIndex > 0) {
+                String topFolderKey = PathBuilderUtil.getTopFolder(userFolderKey, originalName, slashIndex);
                 if (minioRepository.isDirectoryExists(topFolderKey)) {
                     throw new ResourceAlreadyExistsException("Directory already exists");
                 }

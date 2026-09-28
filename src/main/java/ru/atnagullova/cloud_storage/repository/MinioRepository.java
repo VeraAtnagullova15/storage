@@ -24,7 +24,7 @@ public class MinioRepository {
     private final MinioProperties minioProperties;
 
 
-    public StatObjectResponse isObjectExists(String objectKey, Long userId, String path) {
+    public StatObjectResponse getObjectInfo(String objectKey, String path) {
 
         try {
             StatObjectResponse statObjectResponse = minioClient.statObject(StatObjectArgs.builder()
@@ -45,7 +45,7 @@ public class MinioRepository {
         }
     }
 
-    public boolean isObjectExists(String objectKey) {
+    public boolean getObjectInfo(String objectKey) {
 
         try {
             minioClient.statObject(StatObjectArgs.builder()
@@ -142,6 +142,23 @@ public class MinioRepository {
         } catch (Exception e) {
             log.error("Unexpected error while delete object");
             throw new StorageMinioException("Delete resource error " + objectKey);
+        }
+    }
+
+    public void copyObject(String from, String to) {
+
+        try {
+            minioClient.copyObject(CopyObjectArgs.builder()
+                    .bucket(minioProperties.getBucket())
+                    .object(to)
+                    .source(CopySource.builder()
+                            .bucket(minioProperties.getBucket())
+                            .object(from)
+                            .build())
+                    .build());
+        } catch (Exception e) {
+            log.error("Errror while copy object");
+            throw new StorageMinioException("Error while rename or move object");
         }
     }
 }

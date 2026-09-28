@@ -46,4 +46,13 @@ public class ResourceStorageControllerImpl implements ResourceStorageController 
 
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
+
+    @Override
+    public ResponseEntity<ResourceInfoDto> renameOrMove(String from, String to, UserDetailsImpl userDetails) {
+
+        Long userId = userDetails.getId();
+        ResourceInfoDto resourceInfo = storageService.renameOrMove(userId, from, to);
+
+        return new ResponseEntity<>(resourceInfo, HttpStatus.OK);
+    }
 }

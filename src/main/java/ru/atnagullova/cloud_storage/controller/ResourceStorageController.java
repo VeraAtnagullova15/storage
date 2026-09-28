@@ -23,7 +23,12 @@ public interface ResourceStorageController {
                                                  @AuthenticationPrincipal UserDetailsImpl userDetails);
 
     @DeleteMapping
-    ResponseEntity<Void> delete (@RequestParam String path,
-                                 @AuthenticationPrincipal UserDetailsImpl userDetails);
+    ResponseEntity<Void> delete(@RequestParam String path,
+                                @AuthenticationPrincipal UserDetailsImpl userDetails);
+
+    @PostMapping("/move")
+    ResponseEntity<ResourceInfoDto> renameOrMove(@RequestParam String from,
+                                                 @RequestParam String to,
+                                                 @AuthenticationPrincipal UserDetailsImpl userDetails);
 
 }
