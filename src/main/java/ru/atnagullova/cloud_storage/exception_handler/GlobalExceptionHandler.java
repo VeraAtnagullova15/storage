@@ -118,6 +118,16 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler
+    public ResponseEntity<ErrorResponseData> handleException(StorageUnexpectedException unexpectedException) {
+
+        log.error("Unexpected error");
+        ErrorResponseData data = new ErrorResponseData();
+        data.setMessage(unexpectedException.getMessage());
+
+        return new ResponseEntity<>(data, HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler
     public ResponseEntity<ErrorResponseData> handleException(Exception exception) {
 
         log.error("Unhandled exception", exception);

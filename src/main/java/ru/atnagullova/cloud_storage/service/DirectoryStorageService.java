@@ -11,5 +11,4 @@ public interface DirectoryStorageService {
 
     DirectoryInfoDto createEmptyDirectory(Long userId, String path);
 
-    boolean isDirectoryExists(String folderKey);
 }

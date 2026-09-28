@@ -1,6 +1,7 @@
 package ru.atnagullova.cloud_storage.util;
 
 import lombok.experimental.UtilityClass;
+import org.springframework.data.redis.connection.ReactiveSetCommands;
 
 @UtilityClass
 public class PathBuilderUtil {
@@ -50,6 +51,11 @@ public class PathBuilderUtil {
         }
 
         return "";
+    }
+
+    public static String getTopFolder(String userFolderKey, String originalName, int lastSlash) {
+
+        return userFolderKey + originalName.substring(0, lastSlash + 1);
     }
 
 }

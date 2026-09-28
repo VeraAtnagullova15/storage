@@ -1,7 +1,7 @@
 package ru.atnagullova.cloud_storage.service;
 
 import org.springframework.web.multipart.MultipartFile;
-import ru.atnagullova.cloud_storage.dto.DownloadFileInfoDto;
+import ru.atnagullova.cloud_storage.dto.DownloadedFileInfoDto;
 import ru.atnagullova.cloud_storage.dto.ResourceInfoDto;
 
 import java.util.List;
@@ -12,9 +12,9 @@ public interface ResourceStorageService {
 
     void delete(Long userId, String path);
 
-    DownloadFileInfoDto download(Long userId, String path);
+    DownloadedFileInfoDto download(Long userId, String path);
 
-    ResourceInfoDto renameOrRemove(Long userId, String from, String to);
+    ResourceInfoDto renameOrMove(Long userId, String from, String to);
 
     List<ResourceInfoDto> search(Long userId, String query);
 

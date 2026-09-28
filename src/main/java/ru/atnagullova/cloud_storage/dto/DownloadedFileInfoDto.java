@@ -1,4 +1,4 @@
 package ru.atnagullova.cloud_storage.dto;
 
-public class DownloadFileInfoDto {
+public class DownloadedFileInfoDto {
 }
