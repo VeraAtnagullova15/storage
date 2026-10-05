@@ -108,11 +108,11 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler
-    public ResponseEntity<ErrorResponseData> handleException(InvalidPathMinioException invalidPathMinioException) {
+    public ResponseEntity<ErrorResponseData> handleException(InvalidPathException invalidPathException) {
 
         log.error("Wrong path");
         ErrorResponseData data = new ErrorResponseData();
-        data.setMessage(invalidPathMinioException.getMessage());
+        data.setMessage(invalidPathException.getMessage());
 
         return new ResponseEntity<>(data, HttpStatus.BAD_REQUEST);
     }

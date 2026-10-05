@@ -11,4 +11,12 @@ public class PathValidationUtils {
         return objectKey.endsWith("/");
     }
 
+    public static boolean isValidPath(String path) {
+
+        if (path.equals(null)) {
+            return false;
+        }
+        return true;
+    }
+
 }

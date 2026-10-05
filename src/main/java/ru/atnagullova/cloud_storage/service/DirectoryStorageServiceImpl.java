@@ -8,7 +8,7 @@ import org.springframework.stereotype.Service;
 import ru.atnagullova.cloud_storage.dto.DirectoryInfoDto;
 import ru.atnagullova.cloud_storage.dto.ResourceInfoDto;
 import ru.atnagullova.cloud_storage.dto.ResourceType;
-import ru.atnagullova.cloud_storage.exception.InvalidPathMinioException;
+import ru.atnagullova.cloud_storage.exception.InvalidPathException;
 import ru.atnagullova.cloud_storage.exception.ResourceNotFoundException;
 import ru.atnagullova.cloud_storage.exception.ResourceAlreadyExistsException;
 import ru.atnagullova.cloud_storage.exception.StorageMinioException;
@@ -30,8 +30,12 @@ public class DirectoryStorageServiceImpl implements DirectoryStorageService {
     @Override
     public List<ResourceInfoDto> getDirectoryInfo(Long userId, String path) {
 
+        if (!PathValidationUtils.isValidPath(path)) {
+            throw new InvalidPathException("Invalid path");
+        }
+
         if (!PathValidationUtils.isPathDirectoryCheck(userId, path)) {
-            throw new InvalidPathMinioException("Directory path must end with slash");
+            throw new InvalidPathException("Directory path must end with slash");
         }
 
         String userFolderKey = PathBuilderUtil.buildObjectKey(userId, path);
@@ -72,8 +76,12 @@ public class DirectoryStorageServiceImpl implements DirectoryStorageService {
     @Override
     public DirectoryInfoDto createEmptyDirectory(Long userId, String path) {
 
+        if (!PathValidationUtils.isValidPath(path)) {
+            throw new InvalidPathException("Incorrect path");
+        }
+
         if (!PathValidationUtils.isPathDirectoryCheck(userId,path)) {
-            throw new InvalidPathMinioException("Directory path must end with slash");
+            throw new InvalidPathException("Directory path must end with slash");
         }
 
         String userFolderKey = PathBuilderUtil.buildObjectKey(userId, path);

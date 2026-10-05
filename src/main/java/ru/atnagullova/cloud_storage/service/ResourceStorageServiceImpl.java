@@ -11,9 +11,7 @@ import org.springframework.web.multipart.MultipartFile;
 import ru.atnagullova.cloud_storage.dto.DownloadedFileInfoDto;
 import ru.atnagullova.cloud_storage.dto.ResourceInfoDto;
 import ru.atnagullova.cloud_storage.dto.ResourceType;
-import ru.atnagullova.cloud_storage.exception.ResourceAlreadyExistsException;
-import ru.atnagullova.cloud_storage.exception.ResourceNotFoundException;
-import ru.atnagullova.cloud_storage.exception.StorageUnexpectedException;
+import ru.atnagullova.cloud_storage.exception.*;
 import ru.atnagullova.cloud_storage.repository.MinioRepository;
 import ru.atnagullova.cloud_storage.util.PathBuilderUtil;
 import ru.atnagullova.cloud_storage.util.PathValidationUtils;
@@ -30,6 +28,10 @@ public class ResourceStorageServiceImpl implements ResourceStorageService {
 
     @Override
     public ResourceInfoDto getInfo(Long userId, String path) {
+
+        if (!PathValidationUtils.isValidPath(path)) {
+            throw new InvalidPathException("Incorrect path");
+        }
 
         String userObjectKey = PathBuilderUtil.buildObjectKey(userId, path);
 
@@ -57,6 +59,10 @@ public class ResourceStorageServiceImpl implements ResourceStorageService {
 
     @Override
     public void delete(Long userId, String path) {
+
+        if (!PathValidationUtils.isValidPath(path)) {
+            throw new InvalidPathException("Incorrect path");
+        }
 
         String userObjectKey = PathBuilderUtil.buildObjectKey(userId, path);
 
@@ -98,8 +104,53 @@ public class ResourceStorageServiceImpl implements ResourceStorageService {
     @Override
     public ResourceInfoDto renameOrMove(Long userId, String from, String to) {
 
+        if (!PathValidationUtils.isValidPath(from) || !PathValidationUtils.isValidPath(to)) {
+            throw new InvalidPathException("Incorrect path");
+        }
+
         String fromKey = PathBuilderUtil.buildObjectKey(userId, from);
         String toKey = PathBuilderUtil.buildObjectKey(userId, to);
+
+        if (PathValidationUtils.isPathDirectoryCheck(userId, from)) {
+
+            if (!minioRepository.isDirectoryExists(fromKey)) {
+                throw new ResourceNotFoundException("Directory not found " + PathBuilderUtil.getObjectName(fromKey));
+            }
+            if (minioRepository.isDirectoryExists(toKey)) {
+                throw new ResourceAlreadyExistsException("Directory already exists " + PathBuilderUtil.getObjectName(toKey));
+            }
+
+            List<String> sourceKeys = new ArrayList<>();
+            try {
+                Iterable<Result<Item>> items = minioRepository.getDirectoryInfo(fromKey, true);
+
+
+                for (Result<Item> result : items) {
+
+                    String objectName = result.get().objectName();
+                    sourceKeys.add(objectName);
+                }
+            } catch (Exception e) {
+                log.error("Unexpected error while getting directory info", e);
+                throw new StorageUnexpectedException("Move/rename directory was failed");
+            }
+
+            List<String> copiedKeys = new ArrayList<>();
+
+            for (String sourceKey : sourceKeys) {
+
+                String objectName = sourceKey.substring(fromKey.length());
+                String newKey = toKey + objectName;
+
+                minioRepository.copyObject(sourceKey, newKey);
+                copiedKeys.add(newKey);
+            }
+            delete(userId, from);
+
+            return new ResourceInfoDto(PathBuilderUtil.getParentFolderPath(userId, toKey), PathBuilderUtil.getObjectName(toKey),
+                    null, ResourceType.DIRECTORY);
+        }
+
 
         if (!minioRepository.getObjectInfo(fromKey)) {
             throw new ResourceNotFoundException("Resource not found " + PathBuilderUtil.getObjectName(fromKey));
@@ -124,6 +175,10 @@ public class ResourceStorageServiceImpl implements ResourceStorageService {
 
     @Override
     public List<ResourceInfoDto> upload(Long userId, String path, List<MultipartFile> object) {
+
+        if (!PathValidationUtils.isValidPath(path)) {
+            throw new InvalidPathException("Incorrect path");
+        }
 
         String userFolderKey = PathBuilderUtil.buildObjectKey(userId, path);
 
