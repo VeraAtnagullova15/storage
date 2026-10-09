@@ -55,4 +55,12 @@ public class ResourceStorageControllerImpl implements ResourceStorageController 
 
         return new ResponseEntity<>(resourceInfo, HttpStatus.OK);
     }
+
+    @Override
+    public ResponseEntity<List<ResourceInfoDto>> search(String query, UserDetailsImpl userDetails) {
+        Long userId = userDetails.getId();
+        List<ResourceInfoDto> searchResults = storageService.search(userId, query);
+
+        return new ResponseEntity<>(searchResults, HttpStatus.OK);
+    }
 }

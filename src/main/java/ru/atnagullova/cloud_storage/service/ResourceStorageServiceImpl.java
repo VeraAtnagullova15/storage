@@ -17,7 +17,9 @@ import ru.atnagullova.cloud_storage.util.PathBuilderUtil;
 import ru.atnagullova.cloud_storage.util.PathValidationUtils;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -170,7 +172,47 @@ public class ResourceStorageServiceImpl implements ResourceStorageService {
 
     @Override
     public List<ResourceInfoDto> search(Long userId, String query) {
-        return List.of();
+
+        if (!PathValidationUtils.isValidPath(query)) {
+            throw new InvalidPathException("Invalid query");
+        }
+
+        String userFolderKey = PathBuilderUtil.buildObjectKey(userId, "");
+        List<ResourceInfoDto> searchResults = new ArrayList<>();
+        Set<String> visitedFolders = new HashSet<>();
+        try {
+            Iterable<Result<Item>> results = minioRepository.getDirectoryInfo(userFolderKey, true);
+
+            for (Result<Item> i : results) {
+                Item item = i.get();
+                String name = item.objectName();
+
+                if (name.equals(userFolderKey)) {
+                    continue;
+                }
+
+                for (int j = name.indexOf('/', userFolderKey.length());
+                     j != -1;
+                     j = name.indexOf('/', j + 1)) {
+
+                    String folderKey = name.substring(0, j + 1);
+                    String folderName = PathBuilderUtil.getObjectName(folderKey);
+                    if (folderName.contains(query) && visitedFolders.add(folderKey)) {
+                        searchResults.add(new ResourceInfoDto(PathBuilderUtil.getParentFolderPath(userId, folderKey),
+                                PathBuilderUtil.getObjectName(folderName), null, ResourceType.DIRECTORY));
+                    }
+                }
+
+                if (PathBuilderUtil.getObjectName(name).contains(query)) {
+                    searchResults.add(new ResourceInfoDto(PathBuilderUtil.getParentFolderPath(userId, name),
+                            PathBuilderUtil.getObjectName(name), item.size(), ResourceType.FILE));
+                }
+            }
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+
+        return searchResults;
     }
 
     @Override

@@ -31,4 +31,8 @@ public interface ResourceStorageController {
                                                  @RequestParam String to,
                                                  @AuthenticationPrincipal UserDetailsImpl userDetails);
 
+    @GetMapping("/search")
+    ResponseEntity<List<ResourceInfoDto>> search (@RequestParam String query,
+                                  @AuthenticationPrincipal UserDetailsImpl userDetails);
+
 }
