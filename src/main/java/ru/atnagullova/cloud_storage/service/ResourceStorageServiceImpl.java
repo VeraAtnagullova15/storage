@@ -16,10 +16,18 @@ import ru.atnagullova.cloud_storage.repository.MinioRepository;
 import ru.atnagullova.cloud_storage.util.PathBuilderUtil;
 import ru.atnagullova.cloud_storage.util.PathValidationUtils;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 
 @Service
 @RequiredArgsConstructor
@@ -100,7 +108,70 @@ public class ResourceStorageServiceImpl implements ResourceStorageService {
 
     @Override
     public DownloadedFileInfoDto download(Long userId, String path) {
-        return null;
+
+        if (!PathValidationUtils.isValidPath(path)) {
+            throw new InvalidPathException("Incorrect path");
+        }
+
+        String userObjectKey = PathBuilderUtil.buildObjectKey(userId, path);
+
+        if (PathValidationUtils.isPathDirectoryCheck(userId, path)) {
+
+            File temporaryFile;
+            try {
+                temporaryFile = File.createTempFile("download", ".zip");
+            } catch (IOException e) {
+                log.error("Create temporary file was failed", e);
+                throw new StorageMinioException("Prepare to download was failed");
+            }
+
+            try (ZipOutputStream zipOutputStream = new ZipOutputStream(new FileOutputStream(temporaryFile))) {
+
+                Iterable<Result<Item>> items = minioRepository.getDirectoryInfo(userObjectKey, true);
+                for (Result<Item> i : items) {
+                    Item item = i.get();
+                    String name = item.objectName();
+
+                    if (name.equals(userObjectKey)) {
+                        continue;
+                    }
+
+                    String rightName = name.substring(userObjectKey.length());
+
+                    if (name.endsWith("/")) {
+                        ZipEntry zipEntryDir = new ZipEntry(rightName);
+                        zipOutputStream.putNextEntry(zipEntryDir);
+                        zipOutputStream.closeEntry();
+                    }
+
+                    ZipEntry zipEntry = new ZipEntry(rightName);
+                    zipOutputStream.putNextEntry(zipEntry);
+                    try (InputStream inputStream = minioRepository.downloadFile(name, path)) {
+
+                        inputStream.transferTo(zipOutputStream);
+                    }
+                    zipOutputStream.closeEntry();
+                }
+
+                InputStream stream = Files.newInputStream(temporaryFile.toPath(), StandardOpenOption.DELETE_ON_CLOSE);
+
+                return new DownloadedFileInfoDto(stream, PathBuilderUtil.getObjectName(userObjectKey) + ".zip",
+                        temporaryFile.length());
+
+            } catch (Exception e) {
+                temporaryFile.delete();
+                log.error("Unexpected error while download directory", e);
+                throw new StorageMinioException("Download directory was failed");
+            }
+        }
+
+        StatObjectResponse statObjectResponse = minioRepository.getObjectInfo(userObjectKey, path);
+        InputStream inputStream = minioRepository.downloadFile(userObjectKey, path);
+
+        DownloadedFileInfoDto downloadedFileInfo = new DownloadedFileInfoDto(inputStream,
+                PathBuilderUtil.getObjectName(userObjectKey), statObjectResponse.size());
+
+        return downloadedFileInfo;
     }
 
     @Override
@@ -209,7 +280,8 @@ public class ResourceStorageServiceImpl implements ResourceStorageService {
                 }
             }
         } catch (Exception e) {
-            throw new RuntimeException(e);
+            log.error("Error while searching files", e);
+            throw new StorageMinioException("Unexpected error while search files " + query);
         }
 
         return searchResults;

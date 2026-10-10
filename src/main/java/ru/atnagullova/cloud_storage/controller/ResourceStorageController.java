@@ -1,11 +1,13 @@
 package ru.atnagullova.cloud_storage.controller;
 
+import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import ru.atnagullova.cloud_storage.configuration.security.UserDetailsImpl;
+import ru.atnagullova.cloud_storage.dto.DownloadedFileInfoDto;
 import ru.atnagullova.cloud_storage.dto.ResourceInfoDto;
 
 import java.util.List;
@@ -34,5 +36,9 @@ public interface ResourceStorageController {
     @GetMapping("/search")
     ResponseEntity<List<ResourceInfoDto>> search (@RequestParam String query,
                                   @AuthenticationPrincipal UserDetailsImpl userDetails);
+
+    @GetMapping(value = "/download", produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)
+    ResponseEntity<InputStreamResource> download (@RequestParam String path,
+                                                  @AuthenticationPrincipal UserDetailsImpl userDetails);
 
 }

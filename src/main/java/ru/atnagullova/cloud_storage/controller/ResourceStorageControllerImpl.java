@@ -1,11 +1,13 @@
 package ru.atnagullova.cloud_storage.controller;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 import ru.atnagullova.cloud_storage.configuration.security.UserDetailsImpl;
+import ru.atnagullova.cloud_storage.dto.DownloadedFileInfoDto;
 import ru.atnagullova.cloud_storage.dto.ResourceInfoDto;
 import ru.atnagullova.cloud_storage.service.ResourceStorageService;
 
@@ -62,5 +64,14 @@ public class ResourceStorageControllerImpl implements ResourceStorageController 
         List<ResourceInfoDto> searchResults = storageService.search(userId, query);
 
         return new ResponseEntity<>(searchResults, HttpStatus.OK);
+    }
+
+    @Override
+    public ResponseEntity<InputStreamResource> download(String path, UserDetailsImpl userDetails) {
+
+        Long userId = userDetails.getId();
+        DownloadedFileInfoDto downloadedFileInfo = storageService.download(userId, path);
+
+        return new ResponseEntity<>(new InputStreamResource(downloadedFileInfo.inputStream()), HttpStatus.OK);
     }
 }

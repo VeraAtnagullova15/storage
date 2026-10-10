@@ -1,7 +1,7 @@
 package ru.atnagullova.cloud_storage.repository;
 
 import io.minio.*;
-import io.minio.errors.ErrorResponseException;
+import io.minio.errors.*;
 import io.minio.messages.DeleteError;
 import io.minio.messages.DeleteObject;
 import io.minio.messages.Item;
@@ -88,8 +88,6 @@ public class MinioRepository {
     }
 
 
-
-
     public void putObject(String objectKey, String contentType, InputStream stream, long objectSize, long partSize) {
 
         if (contentType == null) {
@@ -159,6 +157,24 @@ public class MinioRepository {
         } catch (Exception e) {
             log.error("Errror while copy object");
             throw new StorageMinioException("Error while rename or move object");
+        }
+    }
+
+    public InputStream downloadFile(String objectKey, String path) {
+
+        try {
+            return minioClient.getObject(GetObjectArgs.builder()
+                    .bucket(minioProperties.getBucket())
+                    .object(objectKey)
+                    .build());
+        } catch (ErrorResponseException errorResponseException) {
+            if ("NoSuchKey".equals(errorResponseException.errorResponse().code())) {
+                throw new ResourceNotFoundException("Resource not found " + path);
+            }
+            log.error("Minio error while download file {}", objectKey, errorResponseException);
+            throw new StorageMinioException("Error while download file " + path);
+        } catch (Exception e) {
+            throw new StorageMinioException("Unexpected error while download file");
         }
     }
 }
