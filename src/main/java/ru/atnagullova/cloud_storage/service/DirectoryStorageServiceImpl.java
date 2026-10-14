@@ -14,7 +14,7 @@ import ru.atnagullova.cloud_storage.exception.ResourceAlreadyExistsException;
 import ru.atnagullova.cloud_storage.exception.StorageMinioException;
 import ru.atnagullova.cloud_storage.repository.MinioRepository;
 import ru.atnagullova.cloud_storage.util.PathBuilderUtil;
-import ru.atnagullova.cloud_storage.util.PathValidationUtils;
+import ru.atnagullova.cloud_storage.util.PathValidationUtil;
 
 import java.io.ByteArrayInputStream;
 import java.util.ArrayList;
@@ -30,11 +30,11 @@ public class DirectoryStorageServiceImpl implements DirectoryStorageService {
     @Override
     public List<ResourceInfoDto> getDirectoryInfo(Long userId, String path) {
 
-        if (!PathValidationUtils.isValidPath(path)) {
+        if (!PathValidationUtil.isValidPath(path)) {
             throw new InvalidPathException("Invalid path");
         }
 
-        if (!PathValidationUtils.isPathDirectoryCheck(userId, path)) {
+        if (!PathValidationUtil.isPathDirectoryCheck(userId, path)) {
             throw new InvalidPathException("Directory path must end with slash");
         }
 
@@ -76,11 +76,11 @@ public class DirectoryStorageServiceImpl implements DirectoryStorageService {
     @Override
     public DirectoryInfoDto createEmptyDirectory(Long userId, String path) {
 
-        if (!PathValidationUtils.isValidPath(path)) {
+        if (!PathValidationUtil.isValidPath(path)) {
             throw new InvalidPathException("Incorrect path");
         }
 
-        if (!PathValidationUtils.isPathDirectoryCheck(userId,path)) {
+        if (!PathValidationUtil.isPathDirectoryCheck(userId,path)) {
             throw new InvalidPathException("Directory path must end with slash");
         }
 

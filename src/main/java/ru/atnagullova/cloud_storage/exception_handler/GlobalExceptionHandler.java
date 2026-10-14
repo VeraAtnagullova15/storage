@@ -88,16 +88,6 @@ public class GlobalExceptionHandler {
 
 
     @ExceptionHandler
-    public ResponseEntity<ErrorResponseData> handleException(StorageMinioException storageMinioException) {
-
-        log.error("Unexpected minio error");
-        ErrorResponseData data = new ErrorResponseData();
-        data.setMessage(storageMinioException.getMessage());
-
-        return new ResponseEntity<>(data, HttpStatus.INTERNAL_SERVER_ERROR);
-    }
-
-    @ExceptionHandler
     public ResponseEntity<ErrorResponseData> handleException(MaxUploadSizeExceededException maxUploadSizeExceededException) {
 
         log.error("Uploaded file is too big");
@@ -116,6 +106,17 @@ public class GlobalExceptionHandler {
 
         return new ResponseEntity<>(data, HttpStatus.BAD_REQUEST);
     }
+
+    @ExceptionHandler
+    public ResponseEntity<ErrorResponseData> handleException(StorageMinioException storageMinioException) {
+
+        log.error("Unexpected minio error");
+        ErrorResponseData data = new ErrorResponseData();
+        data.setMessage(storageMinioException.getMessage());
+
+        return new ResponseEntity<>(data, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
 
     @ExceptionHandler
     public ResponseEntity<ErrorResponseData> handleException(StorageUnexpectedException unexpectedException) {

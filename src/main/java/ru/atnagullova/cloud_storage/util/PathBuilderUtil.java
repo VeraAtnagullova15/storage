@@ -5,17 +5,17 @@ import lombok.experimental.UtilityClass;
 @UtilityClass
 public class PathBuilderUtil {
 
-    public static String userRoot(Long userId) {
+    public String userRoot(Long userId) {
 
         return "user-" + userId + "-files/";
     }
 
-    public static String buildObjectKey(Long userId, String path) {
+    public String buildObjectKey(Long userId, String path) {
 
         return userRoot(userId) + path;
     }
 
-    public static String getObjectName(String objectKey) {
+    public String getObjectName(String objectKey) {
 
         String name;
         if (objectKey.endsWith("/")) {
@@ -32,7 +32,7 @@ public class PathBuilderUtil {
         return name;
     }
 
-    public static String getParentFolderPath(Long userId, String objectKey) {
+    public String getParentFolderPath(Long userId, String objectKey) {
 
         String root = userRoot(userId);
         String pathWithoutRoot = objectKey.substring(root.length());
@@ -52,9 +52,15 @@ public class PathBuilderUtil {
         return "";
     }
 
-    public static String getTopFolder(String userFolderKey, String originalName, int lastSlash) {
+    public String getTopFolder(String userFolderKey, String originalName) {
 
-        return userFolderKey + originalName.substring(0, lastSlash + 1);
+        int slash = originalName.indexOf('/');
+        String key = null;
+        if (slash > 0 ) {
+            key = originalName.substring(0, slash + 1);
+        }
+
+        return userFolderKey + key;
     }
 
 }

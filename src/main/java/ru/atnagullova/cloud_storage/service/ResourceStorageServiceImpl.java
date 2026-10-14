@@ -14,7 +14,7 @@ import ru.atnagullova.cloud_storage.dto.ResourceType;
 import ru.atnagullova.cloud_storage.exception.*;
 import ru.atnagullova.cloud_storage.repository.MinioRepository;
 import ru.atnagullova.cloud_storage.util.PathBuilderUtil;
-import ru.atnagullova.cloud_storage.util.PathValidationUtils;
+import ru.atnagullova.cloud_storage.util.PathValidationUtil;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -39,13 +39,13 @@ public class ResourceStorageServiceImpl implements ResourceStorageService {
     @Override
     public ResourceInfoDto getInfo(Long userId, String path) {
 
-        if (!PathValidationUtils.isValidPath(path)) {
+        if (!PathValidationUtil.isValidPath(path)) {
             throw new InvalidPathException("Incorrect path");
         }
 
         String userObjectKey = PathBuilderUtil.buildObjectKey(userId, path);
 
-        if (PathValidationUtils.isPathDirectoryCheck(userId, path)) {
+        if (PathValidationUtil.isPathDirectoryCheck(userId, path)) {
 
             try {
                 if (!minioRepository.isDirectoryExists(userObjectKey)) {
@@ -70,14 +70,21 @@ public class ResourceStorageServiceImpl implements ResourceStorageService {
     @Override
     public void delete(Long userId, String path) {
 
-        if (!PathValidationUtils.isValidPath(path)) {
+        if (!PathValidationUtil.isValidPath(path)) {
             throw new InvalidPathException("Incorrect path");
         }
 
         String userObjectKey = PathBuilderUtil.buildObjectKey(userId, path);
 
+        if ((!minioRepository.getObjectInfo(userObjectKey) &&
+                (!PathValidationUtil.isPathDirectoryCheck(userId, path))) ||
+                (PathValidationUtil.isPathDirectoryCheck(userId, path) &&
+                        (!minioRepository.isDirectoryExists(userObjectKey)))) {
+            throw new ResourceNotFoundException("Resource is not found");
+        }
+
         try {
-            if (PathValidationUtils.isPathDirectoryCheck(userId, path)) {
+            if (PathValidationUtil.isPathDirectoryCheck(userId, path)) {
 
                 List<DeleteObject> toDelete = new ArrayList<>();
                 Iterable<Result<Item>> items = minioRepository.getDirectoryInfo(userObjectKey, true);
@@ -109,13 +116,13 @@ public class ResourceStorageServiceImpl implements ResourceStorageService {
     @Override
     public DownloadedFileInfoDto download(Long userId, String path) {
 
-        if (!PathValidationUtils.isValidPath(path)) {
+        if (!PathValidationUtil.isValidPath(path)) {
             throw new InvalidPathException("Incorrect path");
         }
 
         String userObjectKey = PathBuilderUtil.buildObjectKey(userId, path);
 
-        if (PathValidationUtils.isPathDirectoryCheck(userId, path)) {
+        if (PathValidationUtil.isPathDirectoryCheck(userId, path)) {
 
             File temporaryFile;
             try {
@@ -177,14 +184,14 @@ public class ResourceStorageServiceImpl implements ResourceStorageService {
     @Override
     public ResourceInfoDto renameOrMove(Long userId, String from, String to) {
 
-        if (!PathValidationUtils.isValidPath(from) || !PathValidationUtils.isValidPath(to)) {
+        if (!PathValidationUtil.isValidPath(from) || !PathValidationUtil.isValidPath(to)) {
             throw new InvalidPathException("Incorrect path");
         }
 
         String fromKey = PathBuilderUtil.buildObjectKey(userId, from);
         String toKey = PathBuilderUtil.buildObjectKey(userId, to);
 
-        if (PathValidationUtils.isPathDirectoryCheck(userId, from)) {
+        if (PathValidationUtil.isPathDirectoryCheck(userId, from)) {
 
             if (!minioRepository.isDirectoryExists(fromKey)) {
                 throw new ResourceNotFoundException("Directory not found " + PathBuilderUtil.getObjectName(fromKey));
@@ -244,7 +251,7 @@ public class ResourceStorageServiceImpl implements ResourceStorageService {
     @Override
     public List<ResourceInfoDto> search(Long userId, String query) {
 
-        if (!PathValidationUtils.isValidPath(query)) {
+        if (!PathValidationUtil.isValidPath(query)) {
             throw new InvalidPathException("Invalid query");
         }
 
@@ -290,7 +297,7 @@ public class ResourceStorageServiceImpl implements ResourceStorageService {
     @Override
     public List<ResourceInfoDto> upload(Long userId, String path, List<MultipartFile> object) {
 
-        if (!PathValidationUtils.isValidPath(path)) {
+        if (!PathValidationUtil.isValidPath(path)) {
             throw new InvalidPathException("Incorrect path");
         }
 
@@ -300,17 +307,19 @@ public class ResourceStorageServiceImpl implements ResourceStorageService {
             String originalName = file.getOriginalFilename();
             String objectKey = userFolderKey + originalName;
 
+            if (originalName == null) {
+                throw new ResourceNotFoundException("Resource is not found");
+            }
+
             if (minioRepository.getObjectInfo(objectKey)) {
                 throw new ResourceAlreadyExistsException("Resource already exists " + file.getOriginalFilename());
             }
 
-            int slashIndex = originalName.indexOf('/');
-            if (slashIndex > 0) {
-                String topFolderKey = PathBuilderUtil.getTopFolder(userFolderKey, originalName, slashIndex);
-                if (minioRepository.isDirectoryExists(topFolderKey)) {
-                    throw new ResourceAlreadyExistsException("Directory already exists");
-                }
+            String topFolderKey = PathBuilderUtil.getTopFolder(userFolderKey, originalName);
+            if (minioRepository.isDirectoryExists(topFolderKey)) {
+                throw new ResourceAlreadyExistsException("Directory already exists");
             }
+
         }
 
         List<ResourceInfoDto> uploadedFiles = new ArrayList<>();
