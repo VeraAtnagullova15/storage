@@ -1,9 +1,5 @@
 package ru.atnagullova.cloud_storage.service;
 
-import io.minio.*;
-import io.minio.messages.DeleteError;
-import io.minio.messages.DeleteObject;
-import io.minio.messages.Item;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -60,11 +56,10 @@ public class ResourceStorageServiceImpl implements ResourceStorageService {
             return new ResourceInfoDto(PathBuilderUtil.getParentFolderPath(userId, userObjectKey),
                     PathBuilderUtil.getObjectName(userObjectKey), null, ResourceType.DIRECTORY);
         }
-
-        StatObjectResponse statObjectResponse = minioRepository.getObjectInfo(userObjectKey, path);
+        long size = minioRepository.getObjectSize(userObjectKey, path);
 
             return new ResourceInfoDto(PathBuilderUtil.getParentFolderPath(userId, userObjectKey),
-                    PathBuilderUtil.getObjectName(userObjectKey), statObjectResponse.size(), ResourceType.FILE);
+                    PathBuilderUtil.getObjectName(userObjectKey), size, ResourceType.FILE);
     }
 
     @Override
@@ -86,25 +81,11 @@ public class ResourceStorageServiceImpl implements ResourceStorageService {
         try {
             if (PathValidationUtil.isPathDirectoryCheck(userId, path)) {
 
-                List<DeleteObject> toDelete = new ArrayList<>();
-                Iterable<Result<Item>> items = minioRepository.getDirectoryInfo(userObjectKey, true);
-
-                for (Result<Item> result : items) {
-                    toDelete.add(new DeleteObject(result.get().objectName()));
-                }
-                if (toDelete.isEmpty()) {
-                    throw new ResourceNotFoundException("Directory not found " + path);
-                }
-
-                Iterable<Result<DeleteError>> errors = minioRepository.removeDirectory(toDelete);
-                for (Result<DeleteError> resultError : errors) {
-                    resultError.get();
-                }
+                minioRepository.removeDirectory(userObjectKey);
 
             } else {
 
                 minioRepository.getObjectInfo(userObjectKey, path);
-
                 minioRepository.removeObject(userObjectKey);
             }
         } catch (Exception e) {
@@ -134,15 +115,12 @@ public class ResourceStorageServiceImpl implements ResourceStorageService {
 
             try (ZipOutputStream zipOutputStream = new ZipOutputStream(new FileOutputStream(temporaryFile))) {
 
-                Iterable<Result<Item>> items = minioRepository.getDirectoryInfo(userObjectKey, true);
-                for (Result<Item> i : items) {
-                    Item item = i.get();
-                    String name = item.objectName();
+                List<String> objectNames = minioRepository.getDirectoryObjectNames(userObjectKey);
 
+                for (String name : objectNames) {
                     if (name.equals(userObjectKey)) {
                         continue;
                     }
-
                     String rightName = name.substring(userObjectKey.length());
 
                     if (name.endsWith("/")) {
@@ -172,11 +150,11 @@ public class ResourceStorageServiceImpl implements ResourceStorageService {
             }
         }
 
-        StatObjectResponse statObjectResponse = minioRepository.getObjectInfo(userObjectKey, path);
+        long size = minioRepository.getObjectSize(userObjectKey, path);
         InputStream inputStream = minioRepository.downloadFile(userObjectKey, path);
 
         DownloadedFileInfoDto downloadedFileInfo = new DownloadedFileInfoDto(inputStream,
-                PathBuilderUtil.getObjectName(userObjectKey), statObjectResponse.size());
+                PathBuilderUtil.getObjectName(userObjectKey), size);
 
         return downloadedFileInfo;
     }
@@ -199,26 +177,15 @@ public class ResourceStorageServiceImpl implements ResourceStorageService {
             if (minioRepository.isDirectoryExists(toKey)) {
                 throw new ResourceAlreadyExistsException("Directory already exists " + PathBuilderUtil.getObjectName(toKey));
             }
-
-            List<String> sourceKeys = new ArrayList<>();
-            try {
-                Iterable<Result<Item>> items = minioRepository.getDirectoryInfo(fromKey, true);
-
-
-                for (Result<Item> result : items) {
-
-                    String objectName = result.get().objectName();
-                    sourceKeys.add(objectName);
-                }
-            } catch (Exception e) {
-                log.error("Unexpected error while getting directory info", e);
-                throw new StorageUnexpectedException("Move/rename directory was failed");
+            if (fromKey.equals(toKey)) {
+                throw new InvalidPathException("Directory couldn't be moved to itself");
             }
 
             List<String> copiedKeys = new ArrayList<>();
+            try {
+            List<String> sourceKeys = minioRepository.getDirectoryObjectNames(fromKey);
 
             for (String sourceKey : sourceKeys) {
-
                 String objectName = sourceKey.substring(fromKey.length());
                 String newKey = toKey + objectName;
 
@@ -227,10 +194,15 @@ public class ResourceStorageServiceImpl implements ResourceStorageService {
             }
             delete(userId, from);
 
+        } catch (Exception e) {
+                minioRepository.rollback(copiedKeys);
+                log.error("Error while rename/move directory " + fromKey, e);
+                throw new StorageUnexpectedException("Unexpected error while rename/move directory " + from);
+            }
+
             return new ResourceInfoDto(PathBuilderUtil.getParentFolderPath(userId, toKey), PathBuilderUtil.getObjectName(toKey),
                     null, ResourceType.DIRECTORY);
         }
-
 
         if (!minioRepository.getObjectInfo(fromKey)) {
             throw new ResourceNotFoundException("Resource not found " + PathBuilderUtil.getObjectName(fromKey));
@@ -239,10 +211,8 @@ public class ResourceStorageServiceImpl implements ResourceStorageService {
             throw new ResourceAlreadyExistsException("Resource already exists " + PathBuilderUtil.getObjectName(toKey));
         }
 
-        minioRepository.copyObject(fromKey, toKey);
-        minioRepository.removeObject(fromKey);
-        StatObjectResponse objectInfo = minioRepository.getObjectInfo(toKey, to);
-        long size = objectInfo.size();
+        minioRepository.renameOrMoveObject(fromKey, toKey);
+        long size = minioRepository.getObjectSize(toKey, to);
 
         return new ResourceInfoDto(PathBuilderUtil.getParentFolderPath(userId, toKey),
                 PathBuilderUtil.getObjectName(toKey), size, ResourceType.FILE);
@@ -259,12 +229,9 @@ public class ResourceStorageServiceImpl implements ResourceStorageService {
         List<ResourceInfoDto> searchResults = new ArrayList<>();
         Set<String> visitedFolders = new HashSet<>();
         try {
-            Iterable<Result<Item>> results = minioRepository.getDirectoryInfo(userFolderKey, true);
+            List<String> objectNames = minioRepository.getDirectoryObjectNames(userFolderKey);
 
-            for (Result<Item> i : results) {
-                Item item = i.get();
-                String name = item.objectName();
-
+            for (String name : objectNames) {
                 if (name.equals(userFolderKey)) {
                     continue;
                 }
@@ -280,10 +247,11 @@ public class ResourceStorageServiceImpl implements ResourceStorageService {
                                 PathBuilderUtil.getObjectName(folderName), null, ResourceType.DIRECTORY));
                     }
                 }
+                long size = minioRepository.getObjectSize(name, query);
 
                 if (PathBuilderUtil.getObjectName(name).contains(query)) {
                     searchResults.add(new ResourceInfoDto(PathBuilderUtil.getParentFolderPath(userId, name),
-                            PathBuilderUtil.getObjectName(name), item.size(), ResourceType.FILE));
+                            PathBuilderUtil.getObjectName(name), size, ResourceType.FILE));
                 }
             }
         } catch (Exception e) {

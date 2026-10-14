@@ -9,10 +9,15 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Repository;
 import ru.atnagullova.cloud_storage.configuration.minio.MinioProperties;
+import ru.atnagullova.cloud_storage.dto.ResourceInfoDto;
+import ru.atnagullova.cloud_storage.dto.ResourceType;
 import ru.atnagullova.cloud_storage.exception.ResourceNotFoundException;
 import ru.atnagullova.cloud_storage.exception.StorageMinioException;
+import ru.atnagullova.cloud_storage.exception.StorageUnexpectedException;
+import ru.atnagullova.cloud_storage.util.PathBuilderUtil;
 
 import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.List;
 
 @RequiredArgsConstructor
@@ -66,6 +71,12 @@ public class MinioRepository {
         return true;
     }
 
+    public long getObjectSize(String objectKey, String path) {
+
+        StatObjectResponse objectInfo = getObjectInfo(objectKey, path);
+
+        return objectInfo.size();
+    }
 
     public Iterable<Result<Item>> getDirectoryInfo(String folderKey, boolean recursive) {
 
@@ -76,6 +87,23 @@ public class MinioRepository {
                 .build());
     }
 
+    public List<String> getDirectoryObjectNames(String folderKey) {
+
+        List<String> names = new ArrayList<>();
+        try {
+            Iterable<Result<Item>> items = getDirectoryInfo(folderKey, true);
+            for (Result<Item> i : items) {
+                Item item = i.get();
+                String name = item.objectName();
+                names.add(name);
+            }
+        } catch (Exception e) {
+            log.error("Error while getting names of objects from directory " + folderKey);
+            new StorageMinioException("Unexpected error while getting directory info " + folderKey);
+        }
+
+        return names;
+    }
 
     public boolean isDirectoryExists(String folderKey) {
 
@@ -86,7 +114,6 @@ public class MinioRepository {
                         .build())
                 .iterator().hasNext();
     }
-
 
     public void putObject(String objectKey, String contentType, InputStream stream, long objectSize, long partSize) {
 
@@ -116,12 +143,30 @@ public class MinioRepository {
         }
     }
 
-    public Iterable<Result<DeleteError>> removeDirectory(List<DeleteObject> toDelete) {
+    public void removeDirectory(String folderKey) {
 
-        return minioClient.removeObjects(RemoveObjectsArgs.builder()
-                .bucket(minioProperties.getBucket())
-                .objects(toDelete)
-                .build());
+        try {
+            List<DeleteObject> toDelete = new ArrayList<>();
+            Iterable<Result<Item>> items = getDirectoryInfo(folderKey, true);
+
+            for (Result<Item> result : items) {
+                toDelete.add(new DeleteObject(result.get().objectName()));
+            }
+            if (toDelete.isEmpty()) {
+                throw new ResourceNotFoundException("Directory not found");
+            }
+            Iterable<Result<DeleteError>> errors = minioClient.removeObjects(RemoveObjectsArgs.builder()
+                    .bucket(minioProperties.getBucket())
+                    .objects(toDelete)
+                    .build());
+            for (Result<DeleteError> resultError : errors) {
+                resultError.get();
+
+            }
+        } catch (Exception e) {
+            log.error("Unexpected error while delete object", e);
+            throw new StorageMinioException("Delete was failed");
+        }
     }
 
     public void removeObject(String objectKey) {
@@ -175,6 +220,23 @@ public class MinioRepository {
             throw new StorageMinioException("Error while download file " + path);
         } catch (Exception e) {
             throw new StorageMinioException("Unexpected error while download file");
+        }
+    }
+
+    public void renameOrMoveObject(String fromKey, String toKey) {
+
+        copyObject(fromKey, toKey);
+        removeObject(fromKey);
+
+    }
+
+    public void rollback (List<String> copiedObjectNames) {
+        try {
+            for (String name : copiedObjectNames) {
+                removeObject(name);
+            }
+        } catch (Exception e) {
+            log.error("Rollback failed");
         }
     }
 }
