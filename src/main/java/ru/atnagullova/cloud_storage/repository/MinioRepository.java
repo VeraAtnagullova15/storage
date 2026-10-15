@@ -9,12 +9,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Repository;
 import ru.atnagullova.cloud_storage.configuration.minio.MinioProperties;
-import ru.atnagullova.cloud_storage.dto.ResourceInfoDto;
-import ru.atnagullova.cloud_storage.dto.ResourceType;
+import ru.atnagullova.cloud_storage.dto.StorageObjectInfoDto;
 import ru.atnagullova.cloud_storage.exception.ResourceNotFoundException;
 import ru.atnagullova.cloud_storage.exception.StorageMinioException;
-import ru.atnagullova.cloud_storage.exception.StorageUnexpectedException;
-import ru.atnagullova.cloud_storage.util.PathBuilderUtil;
 
 import java.io.InputStream;
 import java.util.ArrayList;
@@ -29,28 +26,7 @@ public class MinioRepository {
     private final MinioProperties minioProperties;
 
 
-    public StatObjectResponse getObjectInfo(String objectKey, String path) {
-
-        try {
-            StatObjectResponse statObjectResponse = minioClient.statObject(StatObjectArgs.builder()
-                    .bucket(minioProperties.getBucket())
-                    .object(objectKey)
-                    .build());
-            return statObjectResponse;
-
-        } catch (ErrorResponseException errorResponseException) {
-            if ("NoSuchKey".equals(errorResponseException.errorResponse().code())) {
-                throw new ResourceNotFoundException("Resource not found " + path);
-            }
-            log.error("Minio error while getting file info {}", objectKey, errorResponseException);
-            throw new StorageMinioException("Error while getting file info " + path);
-        } catch (Exception e) {
-            log.error("Unexpected error  while getting file info {}", objectKey, e);
-            throw new StorageMinioException("Getting file info " + path + "was failed");
-        }
-    }
-
-    public boolean getObjectInfo(String objectKey) {
+    public boolean isObjectExists(String objectKey) {
 
         try {
             minioClient.statObject(StatObjectArgs.builder()
@@ -73,12 +49,26 @@ public class MinioRepository {
 
     public long getObjectSize(String objectKey, String path) {
 
-        StatObjectResponse objectInfo = getObjectInfo(objectKey, path);
+        try {
+            StatObjectResponse statObjectResponse = minioClient.statObject(StatObjectArgs.builder()
+                    .bucket(minioProperties.getBucket())
+                    .object(objectKey)
+                    .build());
+            return statObjectResponse.size();
 
-        return objectInfo.size();
+        } catch (ErrorResponseException errorResponseException) {
+            if ("NoSuchKey".equals(errorResponseException.errorResponse().code())) {
+                throw new ResourceNotFoundException("Resource not found " + path);
+            }
+            log.error("Minio error while getting file info {}", objectKey, errorResponseException);
+            throw new StorageMinioException("Error while getting file info " + path);
+        } catch (Exception e) {
+            log.error("Unexpected error  while getting file info {}", objectKey, e);
+            throw new StorageMinioException("Getting file info " + path + "was failed");
+        }
     }
 
-    public Iterable<Result<Item>> getDirectoryInfo(String folderKey, boolean recursive) {
+    private Iterable<Result<Item>> getDirectoryInfo(String folderKey, boolean recursive) {
 
         return minioClient.listObjects(ListObjectsArgs.builder()
                 .bucket(minioProperties.getBucket())
@@ -99,10 +89,30 @@ public class MinioRepository {
             }
         } catch (Exception e) {
             log.error("Error while getting names of objects from directory " + folderKey);
-            new StorageMinioException("Unexpected error while getting directory info " + folderKey);
+            throw new StorageMinioException("Unexpected error while getting directory info " + folderKey);
         }
 
         return names;
+    }
+
+    public List<StorageObjectInfoDto> getStorageObjectsInfo(String folderKey) {
+
+        List<StorageObjectInfoDto> storageObjects = new ArrayList<>();
+        try {
+            Iterable<Result<Item>> items = getDirectoryInfo(folderKey, false);
+            for (Result<Item> i : items) {
+                Item item = i.get();
+                String name = item.objectName();
+                long size = item.size();
+                boolean isDir = item.isDir();
+                storageObjects.add(new StorageObjectInfoDto(name, size, isDir));
+            }
+        } catch (Exception e) {
+            log.error("Error while getting names of objects from directory " + folderKey);
+            throw new StorageMinioException("Unexpected error while getting directory info " + folderKey);
+        }
+
+        return storageObjects;
     }
 
     public boolean isDirectoryExists(String folderKey) {

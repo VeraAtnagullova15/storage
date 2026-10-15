@@ -1,13 +1,12 @@
 package ru.atnagullova.cloud_storage.service;
 
-import io.minio.Result;
-import io.minio.messages.Item;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import ru.atnagullova.cloud_storage.dto.DirectoryInfoDto;
 import ru.atnagullova.cloud_storage.dto.ResourceInfoDto;
 import ru.atnagullova.cloud_storage.dto.ResourceType;
+import ru.atnagullova.cloud_storage.dto.StorageObjectInfoDto;
 import ru.atnagullova.cloud_storage.exception.InvalidPathException;
 import ru.atnagullova.cloud_storage.exception.ResourceNotFoundException;
 import ru.atnagullova.cloud_storage.exception.ResourceAlreadyExistsException;
@@ -46,20 +45,20 @@ public class DirectoryStorageServiceImpl implements DirectoryStorageService {
                 throw new ResourceNotFoundException("Directory not found " + path);
             }
 
-            Iterable<Result<Item>> results = minioRepository.getDirectoryInfo(userFolderKey, false);
+            List<StorageObjectInfoDto> objectNames = minioRepository.getStorageObjectsInfo(userFolderKey);
 
-            for (Result<Item> i : results) {
-                Item item = i.get();
-                String name = item.objectName();
-                boolean isDir = item.isDir();
+            for (StorageObjectInfoDto objectName : objectNames) {
+                String name = objectName.name();
+                long size = objectName.size();
+                boolean isDir = objectName.isDir();
 
-                if (name.equals(userFolderKey) && item.size() == 0 || name.endsWith(".DS_Store")) {
+                if (name.equals(userFolderKey) || name.endsWith(".DS_Store")) {
                     continue;
                 }
 
                 directoryResults.add(new ResourceInfoDto(PathBuilderUtil.getParentFolderPath(userId, name),
                         PathBuilderUtil.getObjectName(name),
-                        isDir ? null : item.size(),
+                        isDir ? null : size,
                         isDir ? ResourceType.DIRECTORY : ResourceType.FILE));
             }
 

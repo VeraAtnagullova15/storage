@@ -71,7 +71,7 @@ public class ResourceStorageServiceImpl implements ResourceStorageService {
 
         String userObjectKey = PathBuilderUtil.buildObjectKey(userId, path);
 
-        if ((!minioRepository.getObjectInfo(userObjectKey) &&
+        if ((!minioRepository.isObjectExists(userObjectKey) &&
                 (!PathValidationUtil.isPathDirectoryCheck(userId, path))) ||
                 (PathValidationUtil.isPathDirectoryCheck(userId, path) &&
                         (!minioRepository.isDirectoryExists(userObjectKey)))) {
@@ -85,7 +85,6 @@ public class ResourceStorageServiceImpl implements ResourceStorageService {
 
             } else {
 
-                minioRepository.getObjectInfo(userObjectKey, path);
                 minioRepository.removeObject(userObjectKey);
             }
         } catch (Exception e) {
@@ -204,10 +203,10 @@ public class ResourceStorageServiceImpl implements ResourceStorageService {
                     null, ResourceType.DIRECTORY);
         }
 
-        if (!minioRepository.getObjectInfo(fromKey)) {
+        if (!minioRepository.isObjectExists(fromKey)) {
             throw new ResourceNotFoundException("Resource not found " + PathBuilderUtil.getObjectName(fromKey));
         }
-        if (minioRepository.getObjectInfo(toKey)) {
+        if (minioRepository.isObjectExists(toKey)) {
             throw new ResourceAlreadyExistsException("Resource already exists " + PathBuilderUtil.getObjectName(toKey));
         }
 
@@ -279,7 +278,7 @@ public class ResourceStorageServiceImpl implements ResourceStorageService {
                 throw new ResourceNotFoundException("Resource is not found");
             }
 
-            if (minioRepository.getObjectInfo(objectKey)) {
+            if (minioRepository.isObjectExists(objectKey)) {
                 throw new ResourceAlreadyExistsException("Resource already exists " + file.getOriginalFilename());
             }
 
