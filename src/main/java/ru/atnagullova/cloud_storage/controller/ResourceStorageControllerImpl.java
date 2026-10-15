@@ -2,8 +2,7 @@ package ru.atnagullova.cloud_storage.controller;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.InputStreamResource;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 import ru.atnagullova.cloud_storage.configuration.security.UserDetailsImpl;
@@ -11,6 +10,7 @@ import ru.atnagullova.cloud_storage.dto.DownloadedFileInfoDto;
 import ru.atnagullova.cloud_storage.dto.ResourceInfoDto;
 import ru.atnagullova.cloud_storage.service.ResourceStorageService;
 
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 @RestController
@@ -28,6 +28,7 @@ public class ResourceStorageControllerImpl implements ResourceStorageController 
         return new ResponseEntity<>(resourceInfo, HttpStatus.OK);
     }
 
+    @Override
     public ResponseEntity<List<ResourceInfoDto>> upload(String path,
                                                         List<MultipartFile> object,
                                                         UserDetailsImpl userDetails) {
