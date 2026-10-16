@@ -48,9 +48,7 @@ public class StorageIntegrationTest extends AbstractIntegrationTest {
 
     private Cookie signUpAndSignIn(String username) throws Exception {
 
-        String body = "{\"username\":\""
-                + username
-                + "\",\"password\":\"password123\"}";
+        String body = getContentBody(username, "password123");
 
         mockMvc.perform(post("/api/auth/sign-up")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -214,6 +212,103 @@ public class StorageIntegrationTest extends AbstractIntegrationTest {
         String response = result.getResponse().getContentAsString();
 
         assertThat(response.contains("string")).isFalse();
+    }
+
+
+    @Test
+    public void getInfo_getInfoUnexistingResource() throws Exception {
+
+        Cookie tamara = signUpAndSignIn("tamara");
+        String root = getRootByUsername("tamara");
+
+        mockMvc.perform(get("/api/resource")
+                .param("path", "star.txt")
+                .cookie(tamara))
+                .andExpect(status().isNotFound());
+
+        assertThat(getBucketObjects(root).contains(getBucketObjects(root) + "star.txt")).isFalse();
+    }
+
+
+    @Test
+    public void createEmptyDirectory_directoryExistsOnBucket() throws Exception {
+
+        Cookie vera = signUpAndSignIn("vera");
+        String root = getRootByUsername("vera");
+
+        mockMvc.perform(post("/api/directory")
+                .param("path", "Vera docs/")
+                .cookie(vera))
+                .andExpect(status().isCreated());
+
+        assertThat(getBucketObjects(root).contains(getBucketObjects(root) + "Vera docs/"));
+    }
+
+
+    @Test
+    public void upload_uploadFileWithCyrillicName() throws Exception {
+
+        Cookie petr = signUpAndSignIn("petr");
+        String root = getRootByUsername("petr");
+
+        mockMvc.perform(post("/api/directory")
+                        .param("path", "список дел/")
+                        .cookie(petr))
+                .andExpect(status().isCreated());
+
+        mockMvc.perform(multipart("/api/resource")
+                .file(new MockMultipartFile("object", "расписание.txt",
+                        "text/plain", "расписание занятий".getBytes()))
+                        .param("path", "список дел/")
+                .cookie(petr))
+                .andExpect(status().isCreated());
+
+        assertThat(getBucketObjects(root).contains(getBucketObjects(root) + "список дел/расписание.txt"));
+
+    }
+
+
+    @Test
+    public void upload_uploadAlreadyExistingFile() throws Exception {
+
+        Cookie natali = signUpAndSignIn("Nataly");
+
+        mockMvc.perform(multipart("/api/resource")
+                        .file(new MockMultipartFile("object", "nataly.txt",
+                                "text/plain", "to-do list".getBytes()))
+                        .param("path", "")
+                        .cookie(natali))
+                .andExpect(status().isCreated());
+
+        mockMvc.perform(multipart("/api/resource")
+                        .file(new MockMultipartFile("object", "nataly.txt",
+                                "text/plain", "расписание занятий".getBytes()))
+                        .param("path", "")
+                        .cookie(natali))
+                .andExpect(status().isConflict());
+    }
+
+
+
+    @Test
+    public void renameOrMove_moveDirectoryIntoItself_DirectoryAlreadyExists() throws Exception {
+
+        Cookie pavel = signUpAndSignIn("pavel");
+        String root = getRootByUsername("pavel");
+
+        mockMvc.perform(post("/api/directory")
+                        .param("path", "Pavel's schedule/")
+                        .cookie(pavel))
+                .andExpect(status().isCreated());
+
+        assertThat(getBucketObjects(root).contains(getBucketObjects(root) + "Pavel's schedule/"));
+
+        mockMvc.perform(post("/api/resource/move")
+                        .param("from", "Pavel's schedule/")
+                        .param("to", "Pavel's schedule/")
+                        .cookie(pavel))
+                .andExpect(status().isConflict());
+
     }
 
 

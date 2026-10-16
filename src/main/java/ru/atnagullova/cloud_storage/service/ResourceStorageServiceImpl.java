@@ -176,9 +176,6 @@ public class ResourceStorageServiceImpl implements ResourceStorageService {
             if (minioRepository.isDirectoryExists(toKey)) {
                 throw new ResourceAlreadyExistsException("Directory already exists " + PathBuilderUtil.getObjectName(toKey));
             }
-            if (fromKey.equals(toKey)) {
-                throw new InvalidPathException("Directory couldn't be moved to itself");
-            }
 
             List<String> copiedKeys = new ArrayList<>();
             try {

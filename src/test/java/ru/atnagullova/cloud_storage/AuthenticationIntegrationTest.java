@@ -4,40 +4,41 @@ package ru.atnagullova.cloud_storage;
 import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.session.data.redis.RedisSessionRepository;
 import org.springframework.test.web.servlet.MvcResult;
-import org.testcontainers.junit.jupiter.Testcontainers;
 import ru.atnagullova.cloud_storage.entity.User;
 
+import java.util.Set;
+
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-@AutoConfigureMockMvc
-@Testcontainers
+
 public class AuthenticationIntegrationTest extends AbstractIntegrationTest{
 
-    @Autowired
-    private MockMvc mockMvc;
 
     @Autowired
     private PasswordEncoder passwordEncoder;
+    @Autowired
+    private RedisSessionRepository sessionRepository;
+    @Autowired
+    private StringRedisTemplate redisTemplate;
+
 
     @Test
     public void signUp_saveUserWithEncodedPassword() throws Exception {
 
         mockMvc.perform(post("/api/auth/sign-up")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("""
-                        {"username":"ilgiz","password":"password123"}
-                        """))
+                .content(getContentBody("ilgiz", "password123")))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.username").value("ilgiz"));
 
@@ -53,9 +54,7 @@ public class AuthenticationIntegrationTest extends AbstractIntegrationTest{
 
         mockMvc.perform(post("/api/auth/sign-up")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("""
-                        {"username":"tamara","password":"password456"}
-                        """))
+                .content(getContentBody("tamara", "password123")))
                 .andExpect(status().isConflict());
     }
 
@@ -67,9 +66,7 @@ public class AuthenticationIntegrationTest extends AbstractIntegrationTest{
 
         mockMvc.perform(post("/api/auth/sign-in")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("""
-                        {"username":"ivan","password":"password456"}
-                        """))
+                .content(getContentBody("ivan", "password456")))
                 .andExpect(status().isUnauthorized());
     }
 
@@ -89,18 +86,43 @@ public class AuthenticationIntegrationTest extends AbstractIntegrationTest{
 
         MvcResult signInResult = mockMvc.perform(post("/api/auth/sign-in")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {"username":"petr","password":"password123"}
-                                """))
+                        .content(getContentBody("petr", "password123")))
                 .andExpect(status().isOk())
                 .andReturn();
 
         Cookie session = signInResult.getResponse().getCookie("SESSION");
 
-        mockMvc.perform(get("/api/user/me").cookie(session)
+        mockMvc.perform(get("/api/user/me")
+                        .cookie(session)
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.username").value("petr"));
+    }
+
+    @Test
+    public void signUpAndSignIp_sessionSavedOnRedis() throws Exception {
+
+        Set<String> beforeKeys = redisTemplate.keys("spring:session:sessions:*");
+        int countKeysBefore = beforeKeys.size();
+
+        MvcResult result = mockMvc.perform(post("/api/auth/sign-up")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(getContentBody("ilgiz", "password123")))
+                .andExpect(status().isCreated())
+                .andReturn();
+
+        Cookie session = result.getResponse().getCookie("SESSION");
+        assertNotNull(session);
+
+        Set<String> afterKeys = redisTemplate.keys("spring:session:sessions:*");
+        int countKeysAfter = afterKeys.size();
+
+        assertTrue(countKeysBefore < countKeysAfter);
+
+        mockMvc.perform(get("/api/resource")
+                .cookie(session)
+                        .param("path", ""))
+                .andExpect(status().isOk());
     }
 
 }
