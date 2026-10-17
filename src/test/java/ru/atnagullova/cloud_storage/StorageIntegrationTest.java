@@ -22,13 +22,14 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+
 public class StorageIntegrationTest extends AbstractIntegrationTest {
 
     @Autowired
     private MinioClient minioClient;
 
     @Value("${minio.bucket}")
-    private String bucket;
+    protected String bucket;
 
     @BeforeEach
     public void cleanBucket() throws Exception {
@@ -46,7 +47,7 @@ public class StorageIntegrationTest extends AbstractIntegrationTest {
         }
     }
 
-    private Cookie signUpAndSignIn(String username) throws Exception {
+    protected Cookie signUpAndSignIn(String username) throws Exception {
 
         String body = getContentBody(username, "password123");
 
