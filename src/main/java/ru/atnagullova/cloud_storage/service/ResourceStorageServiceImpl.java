@@ -9,6 +9,7 @@ import ru.atnagullova.cloud_storage.dto.ResourceInfoDto;
 import ru.atnagullova.cloud_storage.dto.ResourceType;
 import ru.atnagullova.cloud_storage.exception.*;
 import ru.atnagullova.cloud_storage.repository.MinioRepository;
+import ru.atnagullova.cloud_storage.util.ObjectNameValidationUtil;
 import ru.atnagullova.cloud_storage.util.PathBuilderUtil;
 import ru.atnagullova.cloud_storage.util.PathValidationUtil;
 
@@ -18,6 +19,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.StandardOpenOption;
+import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -65,8 +67,8 @@ public class ResourceStorageServiceImpl implements ResourceStorageService {
     @Override
     public void delete(Long userId, String path) {
 
-        if (!PathValidationUtil.isValidPath(path)) {
-            throw new InvalidPathException("Incorrect path");
+        if (path.isEmpty()) {
+            throw new InvalidPathException("Root cannot be deleted");
         }
 
         String userObjectKey = PathBuilderUtil.buildObjectKey(userId, path);
@@ -135,6 +137,7 @@ public class ResourceStorageServiceImpl implements ResourceStorageService {
                         inputStream.transferTo(zipOutputStream);
                     }
                     zipOutputStream.closeEntry();
+                    continue;
                 }
 
                 InputStream stream = Files.newInputStream(temporaryFile.toPath(), StandardOpenOption.DELETE_ON_CLOSE);
@@ -161,7 +164,7 @@ public class ResourceStorageServiceImpl implements ResourceStorageService {
     @Override
     public ResourceInfoDto renameOrMove(Long userId, String from, String to) {
 
-        if (!PathValidationUtil.isValidPath(from) || !PathValidationUtil.isValidPath(to)) {
+        if (from.isEmpty() || to.isEmpty()) {
             throw new InvalidPathException("Incorrect path");
         }
 
@@ -217,7 +220,7 @@ public class ResourceStorageServiceImpl implements ResourceStorageService {
     @Override
     public List<ResourceInfoDto> search(Long userId, String query) {
 
-        if (!PathValidationUtil.isValidPath(query)) {
+        if (query == null || query.isBlank() || query.length() > 50) {
             throw new InvalidPathException("Invalid query");
         }
 
@@ -243,9 +246,9 @@ public class ResourceStorageServiceImpl implements ResourceStorageService {
                                 PathBuilderUtil.getObjectName(folderName), null, ResourceType.DIRECTORY));
                     }
                 }
-                long size = minioRepository.getObjectSize(name, query);
 
                 if (PathBuilderUtil.getObjectName(name).contains(query)) {
+                    long size = minioRepository.getObjectSize(name, query);
                     searchResults.add(new ResourceInfoDto(PathBuilderUtil.getParentFolderPath(userId, name),
                             PathBuilderUtil.getObjectName(name), size, ResourceType.FILE));
                 }
@@ -269,12 +272,16 @@ public class ResourceStorageServiceImpl implements ResourceStorageService {
 
         for (MultipartFile file : object) {
             String originalName = file.getOriginalFilename();
-            String objectKey = userFolderKey + originalName;
 
             if (originalName == null) {
                 throw new ResourceNotFoundException("Resource is not found");
             }
+            originalName = Normalizer.normalize(file.getOriginalFilename(), Normalizer.Form.NFC);
+            String objectKey = userFolderKey + originalName;
 
+            if (!PathValidationUtil.isValidPath(originalName)) {
+                throw new InvalidPathException("Incorrect name of the file");
+            }
             if (minioRepository.isObjectExists(objectKey)) {
                 throw new ResourceAlreadyExistsException("Resource already exists " + file.getOriginalFilename());
             }
@@ -289,7 +296,7 @@ public class ResourceStorageServiceImpl implements ResourceStorageService {
         List<ResourceInfoDto> uploadedFiles = new ArrayList<>();
         try {
             for (MultipartFile file : object) {
-                String fileName = file.getOriginalFilename();
+                String fileName = Normalizer.normalize(file.getOriginalFilename(), Normalizer.Form.NFC);
                 String objectKey = userFolderKey + fileName;
 
                 minioRepository.putObject(objectKey, file.getContentType(), file.getInputStream(), file.getSize(), -1);

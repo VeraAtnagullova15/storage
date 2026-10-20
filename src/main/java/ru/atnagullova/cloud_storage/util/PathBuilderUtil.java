@@ -2,6 +2,8 @@ package ru.atnagullova.cloud_storage.util;
 
 import lombok.experimental.UtilityClass;
 
+import java.text.Normalizer;
+
 @UtilityClass
 public class PathBuilderUtil {
 
@@ -12,6 +14,7 @@ public class PathBuilderUtil {
 
     public String buildObjectKey(Long userId, String path) {
 
+        path = Normalizer.normalize(path, Normalizer.Form.NFC);
         return userRoot(userId) + path;
     }
 

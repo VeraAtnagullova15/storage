@@ -12,5 +12,11 @@ CREATE TABLE IF NOT EXISTS users
 ALTER TABLE users
 RENAME COLUMN login TO username;
 
+-- changeset vatnagullova:3
+ALTER TABLE users
+ALTER COLUMN username TYPE VARCHAR(64),
+ALTER COLUMN password TYPE VARCHAR(64);
+
+
 
 

@@ -46,7 +46,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         User user = new User(requestDto.username(), encodedPassword);
         userRepository.save(user);
 
-        directoryStorageService.createEmptyDirectory(user.getId(), "");
+        directoryStorageService.createUserRootDirectory(user.getId());
 
         UserDetailsImpl userDetails = new UserDetailsImpl(user);
         Authentication authentication = new UsernamePasswordAuthenticationToken(

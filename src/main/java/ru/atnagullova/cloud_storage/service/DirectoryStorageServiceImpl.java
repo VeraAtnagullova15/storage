@@ -7,11 +7,9 @@ import ru.atnagullova.cloud_storage.dto.DirectoryInfoDto;
 import ru.atnagullova.cloud_storage.dto.ResourceInfoDto;
 import ru.atnagullova.cloud_storage.dto.ResourceType;
 import ru.atnagullova.cloud_storage.dto.StorageObjectInfoDto;
-import ru.atnagullova.cloud_storage.exception.InvalidPathException;
-import ru.atnagullova.cloud_storage.exception.ResourceNotFoundException;
-import ru.atnagullova.cloud_storage.exception.ResourceAlreadyExistsException;
-import ru.atnagullova.cloud_storage.exception.StorageMinioException;
+import ru.atnagullova.cloud_storage.exception.*;
 import ru.atnagullova.cloud_storage.repository.MinioRepository;
+import ru.atnagullova.cloud_storage.util.ObjectNameValidationUtil;
 import ru.atnagullova.cloud_storage.util.PathBuilderUtil;
 import ru.atnagullova.cloud_storage.util.PathValidationUtil;
 
@@ -75,8 +73,9 @@ public class DirectoryStorageServiceImpl implements DirectoryStorageService {
     @Override
     public DirectoryInfoDto createEmptyDirectory(Long userId, String path) {
 
-        if (!PathValidationUtil.isValidPath(path)) {
-            throw new InvalidPathException("Incorrect path");
+        if (!PathValidationUtil.isValidPath(path) || path.isEmpty()) {
+            log.error("Incorrect directory name " + path);
+            throw new InvalidPathException("Incorrect directory name " + path);
         }
 
         if (!PathValidationUtil.isPathDirectoryCheck(userId,path)) {
@@ -106,6 +105,20 @@ public class DirectoryStorageServiceImpl implements DirectoryStorageService {
 
         return new DirectoryInfoDto(PathBuilderUtil.getParentFolderPath(userId, userFolderKey),
                 PathBuilderUtil.getObjectName(userFolderKey), ResourceType.DIRECTORY);
+    }
+
+    @Override
+    public void createUserRootDirectory(Long userId) {
+
+        String userRootKey = PathBuilderUtil.buildObjectKey(userId, "");
+        try {
+            if(!minioRepository.isDirectoryExists(userRootKey)) {
+                minioRepository.putObject(userRootKey, null, new ByteArrayInputStream(new byte[0]), 0, -1);
+            }
+        } catch (Exception e) {
+            log.error("Create user root directory was failed for user {} was failed", userId, e);
+            throw new StorageUnexpectedException("Create user root directory was failed");
+        }
     }
 
 

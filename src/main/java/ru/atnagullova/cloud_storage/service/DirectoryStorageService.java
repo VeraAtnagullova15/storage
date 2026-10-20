@@ -11,4 +11,6 @@ public interface DirectoryStorageService {
 
     DirectoryInfoDto createEmptyDirectory(Long userId, String path);
 
+    void createUserRootDirectory(Long userId);
+
 }
