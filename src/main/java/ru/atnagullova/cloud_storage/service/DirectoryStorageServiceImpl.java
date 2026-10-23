@@ -9,7 +9,6 @@ import ru.atnagullova.cloud_storage.dto.ResourceType;
 import ru.atnagullova.cloud_storage.dto.StorageObjectInfoDto;
 import ru.atnagullova.cloud_storage.exception.*;
 import ru.atnagullova.cloud_storage.repository.MinioRepository;
-import ru.atnagullova.cloud_storage.util.ObjectNameValidationUtil;
 import ru.atnagullova.cloud_storage.util.PathBuilderUtil;
 import ru.atnagullova.cloud_storage.util.PathValidationUtil;
 
